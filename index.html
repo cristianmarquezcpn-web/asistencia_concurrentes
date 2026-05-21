@@ -320,30 +320,32 @@
 
     // Lógica de Toque (Rotar estados con animación pop y estímulos)
     function toggle(n) {
-        let el = document.getElementById(`c-${n.replace(/\s/g,'_')}`);
-        let lbl = document.getElementById(`lbl-${n.replace(/\s/g,'_')}`);
-        
-        // Efecto visual pop
-        el.classList.remove('pop-anim');
-        void el.offsetWidth; // Forzar reinicio de animación
-        el.classList.add('pop-anim');
-        mostrarEstimulo();
+    // 1. DISPARAR FEEDBACK SENSORIAL (Vibración y Sonido)
+    feedbackSensorial();
+    
+    let el = document.getElementById(`c-${n.replace(/\s/g,'_')}`);
+    let lbl = document.getElementById(`lbl-${n.replace(/\s/g,'_')}`);
+    
+    // Efecto visual pop
+    el.classList.remove('pop-anim');
+    void el.offsetWidth; // Forzar reinicio de animación
+    el.classList.add('pop-anim');
+    mostrarEstimulo();
 
-        // Rotamos: A -> P -> AC -> A
-        if (state.pacientes[n] === 'A') {
-            state.pacientes[n] = 'P';
-            lbl.innerText = '✔️ P';
-        } else if (state.pacientes[n] === 'P') {
-            state.pacientes[n] = 'AC';
-            lbl.innerText = '🔵 AC';
-        } else {
-            state.pacientes[n] = 'A';
-            lbl.innerText = '❌ A';
-        }
-        
-        el.className = `p-card estado-${state.pacientes[n]} pop-anim`;
+    // Rotamos: A -> P -> AC -> A
+    if (state.pacientes[n] === 'A') {
+        state.pacientes[n] = 'P';
+        lbl.innerText = '✔️ P';
+    } else if (state.pacientes[n] === 'P') {
+        state.pacientes[n] = 'AC';
+        lbl.innerText = '🔵 AC';
+    } else {
+        state.pacientes[n] = 'A';
+        lbl.innerText = '❌ A';
     }
-
+    
+    el.className = `p-card estado-${state.pacientes[n]} pop-anim`;
+}
     // Resumen antes de guardar
     function verificar() {
     document.getElementById('modal').style.display = 'flex';
