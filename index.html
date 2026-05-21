@@ -266,57 +266,61 @@
     }
 
     // Lógica de Carga y Viaje en el Tiempo (filtrado inteligente por sala/turno)
-    async function cargarDatos() {
-        const mod = document.getElementById('sel-mod').value;
-        const sala = document.getElementById('sel-sala').value;
-        const turno = document.getElementById('sel-turno').value;
-        const fecha = document.getElementById('fecha-selector').value;
+   async function cargarDatos() {
+    const mod = document.getElementById('sel-mod').value;
+    const sala = document.getElementById('sel-sala').value;
+    const turno = document.getElementById('sel-turno').value;
+    const fecha = document.getElementById('fecha-selector').value;
 
-        if(!fecha) return;
+    if(!fecha) return;
 
-        const grid = document.getElementById('grilla');
-        grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
-        state.pacientes = {};
+    const grid = document.getElementById('grilla');
+    grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
+    state.pacientes = {};
 
-        const snap = await db.ref(`${mod}/pacientes`).once('value');
-        const todos = snap.val();
-        console.log("Datos recibidos de Firebase:", todos);
-        
-        if(!todos) {
-            grid.innerHTML = '<h2>No hay pacientes registrados aquí.🤷‍♂️</h2>';
-            return;
-        }
-
-        grid.innerHTML = '';
-        let encontrados = 0;
-        const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
-
-        for (let nombre in todos) {
-            let p = todos[nombre];
-            const coincide = (mod === 'rehab') 
-                ? (p.turno === turno) 
-                : (String(p.sala) === sala && p.turno === turno);
-
-            if (coincide) {
-                encontrados++;
-                const histSnap = await db.ref(`seguimiento_pacientes/${nombre}/historial/${fecha}`).once('value');
-                const estado = histSnap.val() || 'A';
-                state.pacientes[nombre] = estado;
-
-                const emoji = estado === 'P' ? '✔️' : (estado === 'A' ? '❌' : '🔵');
-                const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
-                
-                grid.innerHTML += `
-                    <div class="p-card estado-${estado}" id="c-${nombre.replace(/\s/g,'_')}" onclick="toggle('${nombre}')">
-                        <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
-                        <p>${nombre}</p>
-                        <span id="lbl-${nombre.replace(/\s/g,'_')}">${emoji} ${estado}</span>
-                    </div>`;
-            }
-        }
-
-        if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno.🤷‍♂️</h2>';
+    // CAMBIO 1: La ruta ahora cambia si es REHAB o si es el resto
+    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
+    
+    const snap = await db.ref(refPath).once('value');
+    const todos = snap.val();
+    
+    if(!todos) {
+        grid.innerHTML = '<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>';
+        return;
     }
+
+    grid.innerHTML = '';
+    let encontrados = 0;
+    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+
+    // CAMBIO 2: Recorremos los datos de forma distinta según el caso
+    for (let key in todos) {
+        let nombre = (mod === 'rehab') ? todos[key] : key;
+        let p = (mod === 'rehab') ? { turno: turno } : todos[key];
+
+        // CAMBIO 3: Filtro simplificado
+        const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+
+        if (coincide) {
+            encontrados++;
+            const histSnap = await db.ref(`seguimiento_pacientes/${nombre}/historial/${fecha}`).once('value');
+            const estado = histSnap.val() || 'A';
+            state.pacientes[nombre] = estado;
+
+            const emoji = estado === 'P' ? '✔️' : (estado === 'A' ? '❌' : '🔵');
+            const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+            
+            grid.innerHTML += `
+                <div class="p-card estado-${estado}" id="c-${nombre.replace(/\s/g,'_')}" onclick="toggle('${nombre}')">
+                    <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                    <p>${nombre}</p>
+                    <span id="lbl-${nombre.replace(/\s/g,'_')}">${emoji} ${estado}</span>
+                </div>`;
+        }
+    }
+
+    if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+}
 
     // Definición de la función - Debe estar arriba
 function feedbackSensorial() {
