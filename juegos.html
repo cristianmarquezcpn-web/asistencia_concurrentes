@@ -30,11 +30,19 @@
 
 <div id="view-selector" class="view active">
     <h1>🎮 ZONA DE JUEGOS</h1>
-    <div style="text-align:center;">
-        <select id="sel-mod" onchange="cargarDatos()" style="padding:10px; border-radius:15px; font-size:1rem;">
+    <div style="text-align:center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:10px; border-radius:15px; font-size:1rem;">
             <option value="cd">Centro de Día (CD)</option>
+            <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
+        <select id="sel-sala" onchange="cargarDatos()" style="padding:10px; border-radius:15px; font-size:1rem;">
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
+            <option value="4">Sala 4</option>
+        </select>
+        <select id="sel-turno" onchange="cargarDatos()" style="padding:10px; border-radius:15px; font-size:1rem;"></select>
     </div>
     <div class="grid" id="grilla"></div>
     <br><button onclick="window.location.href='index.html'" class="btn-game" style="background:#636e72">⬅ Volver a Asistencia</button>
@@ -47,33 +55,38 @@
 </div>
 
 <script>
-    // Configuración Firebase
-
     const firebaseConfig = {
-
         apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
-
         authDomain: "clinicaintegral-5c488.firebaseapp.com",
-
         databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com",
-
         projectId: "clinicaintegral-5c488"
-
     };
 
     firebase.initializeApp(firebaseConfig);
-
     const db = firebase.database();
+
+    function adaptarSelectores() {
+        const mod = document.getElementById('sel-mod').value;
+        const selTurno = document.getElementById('sel-turno');
+        selTurno.innerHTML = '';
+        const turnos = (mod === 'rehab') ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] : ['Mañana', 'Tarde'];
+        turnos.forEach(t => selTurno.innerHTML += `<option value="${t}">${t}</option>`);
+        cargarDatos();
+    }
 
     async function cargarDatos() {
         const mod = document.getElementById('sel-mod').value;
-        const refPath = (mod === 'rehab') ? 'rehab/turnos/Lunes' : 'cd/pacientes';
+        const sala = document.getElementById('sel-sala').value;
+        const turno = document.getElementById('sel-turno').value;
+        const refPath = `${mod}/${sala}/${turno}`;
+        
         const snap = await db.ref(refPath).once('value');
         const todos = snap.val();
         const grid = document.getElementById('grilla');
         grid.innerHTML = '';
+        
         for (let key in todos) {
-            let nombre = (mod === 'rehab') ? todos[key] : key;
+            let nombre = todos[key].nombre || key;
             let fotoUrl = `https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/${encodeURIComponent(nombre)}.jpg`;
             grid.innerHTML += `<div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
                 <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/120'">
@@ -133,7 +146,7 @@
         document.getElementById('view-'+v).classList.add('active');
     }
 
-    cargarDatos();
+    adaptarSelectores();
 </script>
 </body>
 </html>
