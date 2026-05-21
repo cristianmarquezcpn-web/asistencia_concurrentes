@@ -256,6 +256,7 @@
 
         const snap = await db.ref(`${mod}/pacientes`).once('value');
         const todos = snap.val();
+        console.log("Datos recibidos de Firebase:", todos);
         
         if(!todos) {
             grid.innerHTML = '<h2>No hay pacientes registrados aquí.🤷‍♂️</h2>';
