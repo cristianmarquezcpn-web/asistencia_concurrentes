@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESENCIAL | Sistema Integral</title>
     
-    <!-- Fuentes amigables y Confetti para los estímulos -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -111,10 +109,8 @@
 </head>
 <body>
 
-<!-- Toast para Estímulos Positivos -->
 <div id="toast">¡Bien hecho! 🌟</div>
 
-<!-- PANTALLA 1: LOGIN -->
 <div id="view-login" class="view active" style="text-align: center; margin-top: 10vh;">
     <h1 style="font-size: 3rem; color: var(--color-P);">ESENCIAL ✨</h1>
     <p style="font-size: 1.5rem;">Tu portal mágico de asistencia</p>
@@ -122,14 +118,13 @@
     <button class="btn-primario" onclick="login()">🔑 Entrar con Google</button>
 </div>
 
-<!-- PANTALLA 2: INICIO -->
 <div id="view-home" class="view">
     <header style="display:flex; justify-content:space-between; align-items: center;">
         <h2>¡Hola! 👋</h2>
         <button class="btn-volver" onclick="firebase.auth().signOut()">Salir</button>
     </header>
     <div style="display: grid; gap: 20px; margin-top: 30px;">
-        <div class="p-card" onclick="irA('asistencia')" style="background: #fff3e0; border-color: #ff9800;">
+        <div class="p-card" onclick="irA('asistencia')" style="background: #fff3e0; border-color: #ff9800; max-width: 300px; margin: 30px auto;">
             <h1 style="font-size: 3rem; margin: 10px;">📋</h1>
             <h2>Tomar Asistencia</h2>
             <p>¡Vamos a ver quién vino hoy!</p>
@@ -137,22 +132,28 @@
     </div>
 </div>
 
-<!-- PANTALLA 3: ASISTENCIA -->
 <div id="view-asistencia" class="view">
     
     <div class="controles-header">
         <input type="date" id="fecha-selector" onchange="cargarDatos()">
         
-        <select id="sel-mod" onchange="actualizarTurnos()">
+        <select id="sel-mod" onchange="adaptarSelectores()">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
 
+        <select id="sel-sala" onchange="cargarDatos()">
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
+            <option value="4">Sala 4</option>
+        </select>
+
         <select id="sel-turno" onchange="cargarDatos()"></select>
     </div>
 
-    <h2 id="mensaje-cargando">Toca a un paciente para cambiar su estado 👇</h2>
+    <h2 id="mensaje-cargando">Toca la foto para cambiar su estado 👇</h2>
     
     <div class="grid-pacientes" id="grilla"></div>
     
@@ -160,7 +161,6 @@
     <button class="btn-volver" style="width: 100%; padding: 15px;" onclick="irA('home')">⬅ Volver</button>
 </div>
 
-<!-- MODAL DE CONFIRMACIÓN -->
 <div id="modal" class="modal">
     <div class="modal-box">
         <h2 style="font-size: 2rem;">¡Casi terminamos! 🚀</h2>
@@ -175,7 +175,7 @@
     // Configuración Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
-        authDomain: "clinicaintegral-5c488.firebaseapp.com", /* <-- ¡ESTA LÍNEA FALTABA! */
+        authDomain: "clinicaintegral-5c488.firebaseapp.com",
         databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com",
         projectId: "clinicaintegral-5c488"
     };
@@ -208,90 +208,92 @@
         
         if(v === 'asistencia') {
             document.getElementById('fecha-selector').valueAsDate = new Date();
-            actualizarTurnos();
+            adaptarSelectores();
         }
     }
 
     // Autenticación (con Redirect para evitar bloqueos)
-    // Nueva función de login con Popup
-function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-            if (result.user) {
-                // Si el inicio de sesión es exitoso, entra a la app
-                irA('home');
-            }
-        }).catch((error) => {
-            console.error("Error de autenticación:", error);
-            alert("Error: " + error.message);
-        });
-}
+    function login() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).then(() => irA('home'));
+    }
 
-    
     // Lógica de Selectores Dinámicos
-    function actualizarTurnos() {
+    function adaptarSelectores() {
         const mod = document.getElementById('sel-mod').value;
+        const selSala = document.getElementById('sel-sala');
         const selTurno = document.getElementById('sel-turno');
-        selTurno.innerHTML = '';
         
-        const opciones = (mod === 'rehab') ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] : ['Mañana', 'Tarde'];
+        // Mostrar u ocultar selector de sala
+        selSala.style.display = (mod === 'rehab') ? 'none' : 'block';
+        
+        // Limpiar y llenar selector de turno/día
+        selTurno.innerHTML = '';
+        const opciones = (mod === 'rehab') 
+            ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] 
+            : ['manana', 'tarde', 'vespertino'];
         
         opciones.forEach(op => {
-            selTurno.innerHTML += `<option value="${op.toLowerCase()}">${op}</option>`;
+            const label = (mod === 'rehab') ? op : op.charAt(0).toUpperCase() + op.slice(1);
+            selTurno.innerHTML += `<option value="${op}">${label}</option>`;
         });
         
         cargarDatos();
     }
 
-    // Lógica de Carga y Viaje en el Tiempo
+    // Lógica de Carga y Viaje en el Tiempo (filtrado inteligente por sala/turno)
     async function cargarDatos() {
         const mod = document.getElementById('sel-mod').value;
-        const sub = document.getElementById('sel-turno').value;
+        const sala = document.getElementById('sel-sala').value;
+        const turno = document.getElementById('sel-turno').value;
         const fecha = document.getElementById('fecha-selector').value;
 
-        if(!mod || !sub || !fecha) return;
+        if(!fecha) return;
 
-        const path = (mod === 'rehab') ? `rehab/turnos/${sub}/pacientes` : `${mod}/pacientes`;
         const grid = document.getElementById('grilla');
-        grid.innerHTML = '<h2 style="grid-column: 1 / -1;">Buscando información... 🕵️‍♂️</h2>';
+        grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
         state.pacientes = {};
 
-        // 1. Buscamos quiénes pertenecen a este turno/modalidad
-        const snap = await db.ref(path).once('value');
-        const data = snap.val();
+        const snap = await db.ref(`${mod}/pacientes`).once('value');
+        const todos = snap.val();
         
-        if(!data) {
-            grid.innerHTML = '<h2 style="grid-column: 1 / -1;">No hay pacientes aquí 🤷‍♂️</h2>';
+        if(!todos) {
+            grid.innerHTML = '<h2>No hay pacientes registrados aquí.🤷‍♂️</h2>';
             return;
         }
 
         grid.innerHTML = '';
+        let encontrados = 0;
+        const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
 
-        // 2. Por cada paciente, buscamos si YA tiene historial guardado en esa fecha
-        const promesas = Object.keys(data).map(async (n) => {
-            // Aquí la IA tiene la ruta perfecta
-            const histSnap = await db.ref(`seguimiento_pacientes/${n}/historial/${fecha}`).once('value');
-            return { nombre: n, estado: histSnap.val() || 'A' }; // Por defecto Ausente
-        });
+        for (let nombre in todos) {
+            let p = todos[nombre];
+            const coincide = (mod === 'rehab') 
+                ? (p.turno === turno) 
+                : (String(p.sala) === sala && p.turno === turno);
 
-        const resultados = await Promise.all(promesas);
+            if (coincide) {
+                encontrados++;
+                const histSnap = await db.ref(`seguimiento_pacientes/${nombre}/historial/${fecha}`).once('value');
+                const estado = histSnap.val() || 'A';
+                state.pacientes[nombre] = estado;
 
-        // 3. Dibujamos las tarjetas en pantalla
-        resultados.forEach(p => {
-            state.pacientes[p.nombre] = p.estado;
-            const emoji = p.estado === 'P' ? '✔️' : (p.estado === 'A' ? '❌' : '🔵');
-            
-            grid.innerHTML += `
-                <div class="p-card estado-${p.estado}" id="c-${p.nombre.replace(/\s/g,'_')}" onclick="toggle('${p.nombre}')">
-                    <img src="https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/${encodeURIComponent(p.nombre)}.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <p>${p.nombre}</p>
-                    <span id="lbl-${p.nombre.replace(/\s/g,'_')}">${emoji} ${p.estado}</span>
-                </div>`;
-        });
+                const emoji = estado === 'P' ? '✔️' : (estado === 'A' ? '❌' : '🔵');
+                const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+                
+                grid.innerHTML += `
+                    <div class="p-card estado-${estado}" id="c-${nombre.replace(/\s/g,'_')}" onclick="toggle('${nombre}')">
+                        <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                        <p>${nombre}</p>
+                        <span id="lbl-${nombre.replace(/\s/g,'_')}">${emoji} ${estado}</span>
+                    </div>`;
+            }
+        }
+
+        if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno.🤷‍♂️</h2>';
     }
 
-    // Lógica de Toque (Rotar estados)
+    // Lógica de Toque (Rotar estados con animación pop y estímulos)
     function toggle(n) {
         let el = document.getElementById(`c-${n.replace(/\s/g,'_')}`);
         let lbl = document.getElementById(`lbl-${n.replace(/\s/g,'_')}`);
@@ -334,33 +336,27 @@ function login() {
         }
     }
 
-    // Guardado Final optimizado para la IA y Celebración
+    // Guardado Final optimizado para la IA y Celebración con confeti
     function guardar() {
         const fecha = document.getElementById('fecha-selector').value;
-        const mod = document.getElementById('sel-mod').value;
-        const sub = document.getElementById('sel-turno').value;
         const updates = {};
         
         for(let n in state.pacientes) {
-            // Guarda el historial para la IA
             updates[`seguimiento_pacientes/${n}/historial/${fecha}`] = state.pacientes[n];
-            // Guarda la configuración actual del paciente
-            updates[`seguimiento_pacientes/${n}/config`] = { modalidad: mod, turno: sub };
         }
         
         db.ref().update(updates).then(() => { 
             document.getElementById('modal').style.display = 'none'; 
             
-            // ¡MAGIA! Disparamos confeti por toda la pantalla
+            // ¡MAGIA! Disparamos confeti
             confetti({
-                particleCount: 150,
-                spread: 100,
-                origin: { y: 0.6 },
-                colors: ['#27ae60', '#3498db', '#f39c12', '#e74c3c']
+                particleCount: 200,
+                spread: 120,
+                origin: { y: 0.6 }
             });
             
             setTimeout(() => {
-                alert("¡Trabajo espectacular! Todo guardado correctamente. 🚀");
+                alert("¡Trabajo espectacular! Todo guardado correctamente.🚀");
             }, 500);
         });
     }
