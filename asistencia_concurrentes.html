@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C.E.T. PRO - Portal Infantil</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; margin: 0; padding: 20px; text-align: center; user-select: none; }
+        h1 { color: #1a2a6c; font-size: 28px; margin-bottom: 5px; }
+        
+        /* 1. DISEÑO BOTONES DE SELECCIÓN INICIAL */
+        .pantalla-inicio { max-width: 800px; margin: 40px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .grupo-botones { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 25px; }
+        .btn-selector { background: #34495e; color: white; border: none; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .btn-selector.activo { background: #1a2a6c; transform: scale(1.05); box-shadow: 0 5px 15px rgba(26,42,108,0.3); }
+        .btn-sala { background: #5da4d4; }
+        .btn-sala.activo { background: #2980b9; }
+
+        /* 2. GRILLA DE TARJETAS INFANTILES */
+        .zona-asistencia { display: none; } /* Oculto al inicio hasta elegir todo */
+        .grilla-chicos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 25px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        
+        .tarjeta-chico { background: white; border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.06); padding: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 4px solid transparent; position: relative; overflow: hidden; }
+        .tarjeta-chico img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #f0f0f0; transition: all 0.5s; }
+        .tarjeta-chico h3 { margin: 12px 0 0 0; font-size: 18px; color: #2c3e50; }
+        
+        /* --- ANIMACIÓN WOW AL TOCAR (PRESENTE) --- */
+        .tarjeta-chico.presente { border-color: #2ecc71; background: #ebf9f1; transform: scale(1.03); }
+        .tarjeta-chico.presente img { border-color: #2ecc71; filter: none !important; }
+        
+        /* La P gigante que brota y gira */
+        .tarjeta-chico.presente::after {
+            content: 'P'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1);
+            background: rgba(46, 204, 113, 0.95); color: white; font-size: 70px; font-weight: Arial; font-weight: 900;
+            width: 110px; height: 110px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            animation: brotarP 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes brotarP {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-90deg); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        /* --- MÓDULO JUEGO: REVELAR COLOR --- */
+        .tarjeta-chico.modo-juego img { filter: grayscale(100%); } /* Se pone gris para darle color */
+        .tarjeta-chico.juego-completado { animation: fiesta 0.5s ease infinite alternate; }
+        @keyframes fiesta { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+
+        /* 3. PANEL DE LA ORIENTADORA */
+        .panel-supervisora { margin-top: 40px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); max-width: 700px; margin-left: auto; margin-right: auto; }
+        .tabla-control { width: 100%; margin-top: 15px; border-collapse: collapse; }
+        .tabla-control th, .tabla-control td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        .btn-guardar { background: #27ae60; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="pantalla-inicio" id="bloque-filtros">
+        <h2 style="color: #1a2a6c; margin-top: 0;">⚙️ Configuración de Entrada</h2>
+        <p style="color: #555;">Seleccione la Modalidad y la Sala para habilitar el ingreso de los chicos:</p>
+        
+        <div class="grupo-botones">
+            <button class="btn-selector" id="btn-CD" onclick="seleccionarModalidad('CD', this)">C.D.</button>
+            <button class="btn-selector" id="btn-CET_M" onclick="seleccionarModalidad('CET_MANANA', this)">CET Mañana</button>
+            <button class="btn-selector" id="btn-CET_T" onclick="seleccionarModalidad('CET_TARDE', this)">CET Tarde</button>
+            <button class="btn-selector" id="btn-VESP" onclick="seleccionarModalidad('VESPERTINO', this)">Vespertino</button>
+            <button class="btn-selector" id="btn-REHAB" onclick="seleccionarModalidad('REHAB', this)">Rehabilitación</button>
+        </div>
+
+        <div class="grupo-botones" id="filtro-salas" style="display: none;">
+            <button class="btn-selector btn-sala" onclick="seleccionarSala('S1', this)">Sala 1</button>
+            <button class="btn-selector btn-sala" onclick="seleccionarSala('S2', this)">Sala 2</button>
+            <button class="btn-selector btn-sala" onclick="seleccionarSala('S3', this)">Sala 3</button>
+            <button class="btn-selector btn-sala" onclick="seleccionarSala('S4', this)">Sala 4</button>
+        </div>
+    </div>
+
+    <div class="zona-asistencia" id="modulo-principal">
+        <h1 id="titulo-sala-activa">SALA</h1>
+        <p style="color: #555; font-size: 18px; font-weight: bold;">¡Buscá tu foto y vivilo! 🚀</p>
+        
+        <div style="margin-bottom: 20px;">
+            <button class="btn-selector activo" id="modo-asist" onclick="cambiarModoPanel('ASISTENCIA')">📌 Modo Fichero</button>
+            <button class="btn-selector" id="modo-color" onclick="cambiarModoPanel('JUEGO_COLOR')">🎨 Juego: Dar Color</button>
+        </div>
+
+        <div class="grilla-chicos" id="grilla-infantil"></div>
+
+        <div class="panel-supervisora">
+            <h3 style="margin-top: 0; color: #1a2a6c;">📋 Control Final de la Orientadora</h3>
+            <table class="tabla-control">
+                <thead>
+                    <tr>
+                        <th>Concurrente</th>
+                        <th>Estado</th>
+                        <th>Acción Correctiva</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-revision-body"></tbody>
+            </table>
+
+            <div style="margin-top: 20px; text-align: left;">
+                <label style="font-weight: bold;">Novedad Extraordinaria:</label>
+                <select id="novedad-clima" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px;">
+                    <option value="NORMAL">Normal (Asistencia habitual)</option>
+                    <option value="ZONDA">Actividades Suspendidas por Viento Zonda 🌪️</option>
+                    <option value="FERIADO">Feriado Nacional / Provincial 🗓️</option>
+                    <option value="EXCURSION">Salida / Excursión Grupal 🚌</option>
+                </select>
+            </div>
+            <button class="btn-guardar" onclick="subirAsistenciaFirebase()">COMPROMETER DATOS EN FIREBASE</button>
+        </div>
+    </div>
+
+<script>
+    // Inicialización idéntica de tu Firebase
+    const firebaseConfig = { 
+        apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8", 
+        authDomain: "clinicaintegral-5c488.firebaseapp.com", 
+        databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com", 
+        projectId: "clinicaintegral-5c488", 
+        storageBucket: "clinicaintegral-5c488.firebasestorage.app", 
+        messagingSenderId: "184090967634", 
+        appId: "1:184090967634:web:09715937b33ea48288698b" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Simulación de concurrentes apuntando a las fotos de tu repositorio de GitHub
+    const nominaConcurrentes = [
+        { id: "ID_CHICO_A", n: "ALE INGRID", m: "CET_MANANA", s: "S1" },
+        { id: "ID_CHICO_B", n: "ALVAREZ JUANA", m: "CET_MANANA", s: "S1" },
+        { id: "ID_CHICO_C", n: "GUTIERREZ LAUTARO", m: "CET_MANANA", s: "S1" },
+        { id: "ID_CHICO_D", n: "VALLEJO ALEJO", m: "CET_MANANA", s: "S1" }
+    ];
+
+    let modalidadSeleccionada = "";
+    let salaSeleccionada = "";
+    let mapaAsistencia = {};
+    let modoActual = "ASISTENCIA"; // ASISTENCIA o JUEGO_COLOR
+
+    // Audio sintético nativo para estimulación auditiva
+    function sonarCampanita() {
+        const ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctxAudio.createOscillator();
+        const gain = ctxAudio.createGain();
+        osc.connect(gain); gain.connect(ctxAudio.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctxAudio.currentTime); // Nota La (Campanita)
+        gain.gain.setValueAtTime(0.3, ctxAudio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctxAudio.currentTime + 0.4);
+        osc.start(); osc.stop(ctxAudio.currentTime + 0.4);
+    }
+
+    function seleccionarModalidad(mod, boton) {
+        modalidadSeleccionada = mod;
+        desactivarBotones('.btn-selector:not(.btn-sala)');
+        boton.classList.add('activo');
+        document.getElementById('filtro-salas').style.display = 'flex';
+        verificarApertura();
+    }
+
+    function seleccionarSala(sala, boton) {
+        salaSeleccionada = sala;
+        desactivarBotones('.btn-sala');
+        boton.classList.add('activo');
+        verificarApertura();
+    }
+
+    function desactivarBotones(selector) {
+        document.querySelectorAll(selector).forEach(b => b.classList.remove('activo'));
+    }
+
+    function verificarApertura() {
+        if (modalidadSeleccionada && salaSeleccionada) {
+            document.getElementById('titulo-sala-activa').innerText = `${modalidadSeleccionada.replace('_',' ')} - ${salaSeleccionada}`;
+            document.getElementById('modulo-principal').style.display = 'block';
+            renderizarGrillaInfantil();
+        }
+    }
+
+    function renderizarGrillaInfantil() {
+        const grilla = document.getElementById('grilla-infantil');
+        grilla.innerHTML = "";
+        mapaAsistencia = {};
+
+        const filtrados = nominaConcurrentes.filter(c => c.m === modalidadSeleccionada && c.s === salaSeleccionada);
+
+        filtrados.forEach(chico => {
+            mapaAsistencia[chico.id] = { nombre: chico.n, estado: 'A' };
+            
+            // Ruta automatizada a tu repositorio de GitHub para levantar la foto de perfil
+            const rutaFotoGitHub = `./fotos_chicos/${chico.id}.jpg`;
+
+            grilla.innerHTML += `
+                <div class="tarjeta-chico ${modoActual === 'JUEGO_COLOR' ? 'modo-juego' : ''}" id="card-chico-${chico.id}" onclick="accionTarjeta('${chico.id}')">
+                    <img src="${rutaFotoGitHub}" onerror="this.src='https://via.placeholder.com/120/34495e/ffffff?text=${chico.n.split(' ')[0]}'">
+                    <h3>${chico.n}</h3>
+                </div>
+            `;
+        });
+        actualizarPanelSupervisora();
+    }
+
+    function cambiarModoPanel(nuevoModo) {
+        modoActual = nuevoModo;
+        document.getElementById('modo-asist').classList.toggle('activo', nuevoModo === 'ASISTENCIA');
+        document.getElementById('modo-color').classList.toggle('activo', nuevoModo === 'JUEGO_COLOR');
+        renderizarGrillaInfantil();
+    }
+
+    // DISPARADOR TERAPÉUTICO AL TOCAR LA CARA
+    function accionTarjeta(id) {
+        const elemento = document.getElementById(`card-chico-${id}`);
+        
+        if (modoActual === "ASISTENCIA") {
+            // Modo Fichero Directo
+            if (mapaAsistencia[id].estado === 'A') {
+                mapaAsistencia[id].estado = 'P';
+                elemento.classList.add('presente');
+                sonarCampanita(); // Estímulo de éxito
+            } else {
+                mapaAsistencia[id].estado = 'A';
+                elemento.classList.remove('presente');
+            }
+        } else if (modoActual === "JUEGO_COLOR") {
+            // Juego: El chico toca su foto gris y recupera su color real
+            mapaAsistencia[id].estado = 'P';
+            elemento.classList.remove('modo-juego'); // Quita el filtro gris y se hace la luz
+            elemento.classList.add('juego-completado');
+            sonarCampanita();
+            setTimeout(() => elemento.classList.remove('juego-completado'), 600);
+        }
+        actualizarPanelSupervisora();
+    }
+
+    function actualizarPanelSupervisora() {
+        const body = document.getElementById('tabla-revision-body');
+        body.innerHTML = "";
+
+        for (const id in mapaAsistencia) {
+            const dato = mapaAsistencia[id];
+            const textoEstado = dato.estado === 'P' ? '<span style="color:green;font-weight:bold;">P (Presente)</span>' : '<span style="color:red;font-weight:bold;">A (Ausente)</span>';
+            
+            body.innerHTML += `
+                <tr>
+                    <td>${dato.nombre}</td>
+                    <td>${textoEstado}</td>
+                    <td>
+                        <select onchange="corregirDesdeSupervisora('${id}', this.value)">
+                            <option value="P" ${dato.estado === 'P' ? 'selected' : ''}>Presente (P)</option>
+                            <option value="A" ${dato.estado === 'A' ? 'selected' : ''}>Ausente (A)</option>
+                            <option value="AC" ${dato.estado === 'AC' ? 'selected' : ''}>Ausente c/Certificado (AC)</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function corregirDesdeSupervisora(id, nuevoEstado) {
+        mapaAsistencia[id].estado = nuevoEstado;
+        const elemento = document.getElementById(`card-chico-${id}`);
+        
+        if (nuevoEstado === 'P') {
+            elemento.classList.add('presente');
+            elemento.classList.remove('modo-juego');
+        } else {
+            elemento.classList.remove('presente');
+        }
+    }
+
+    function subirAsistenciaFirebase() {
+        const novedad = document.getElementById('novedad-clima').value;
+        const fecha = new Date();
+        const dia = fecha.getDate().toString().padStart(2, '0');
+        const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+        const anio = fecha.getFullYear();
+
+        const rutaFinal = `SISTEMA_PACIENTES/asistencia/${anio}/${mes}/${modalidadSeleccionada}/${salaSeleccionada}/dia_${dia}`;
+        const paqueteNube = {};
+
+        for (const id in mapaAsistencia) {
+            let marcaFinal = mapaAsistencia[id].estado;
+            // Si hubo Zonda o Feriado, el sistema liquida a todos como ausentes automáticos
+            if (novedad === 'ZONDA' || novedad === 'FERIADO') {
+                marcaFinal = 'A'; 
+            }
+            paqueteNube[`${rutaFinal}/chicos/${id}/val`] = marcaFinal;
+        }
+
+        paqueteNube[`${rutaFinal}/metadatos`] = {
+            incidencia: novedad,
+            hora_cierre: fecha.getHours() + ":" + fecha.getMinutes()
+        };
+
+        db.ref().update(paqueteNube)
+            .then(() => {
+                alert("¡Datos sincronizados en Firebase! Dominguito ya puede leer esta sala.");
+                location.reload();
+            })
+            .catch(err => alert("Error: " + err.message));
+    }
+</script>
+</body>
+</html>
