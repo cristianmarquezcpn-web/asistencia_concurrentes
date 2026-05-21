@@ -2,154 +2,132 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ESENCIAL | Sistema Clínico Profesional</title>
+    <title>ESENCIAL | Sistema Integral</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <style>
-        :root { --P: #27ae60; --A: #c0392b; --AC: #2980b9; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        
-        /* Contenedor Principal */
-        .app-view { display: none; max-width: 1000px; margin: auto; animation: fadeIn 0.5s; }
-        .app-view.active { display: block; }
-        
-        /* Tarjetas de Pacientes */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; margin: 30px 0; }
-        .card { background: white; padding: 15px; border-radius: 24px; border: 5px solid #e0e0e0; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .card img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid #f0f0f0; }
-        .card.estado-P { border-color: var(--P); background: #e8f5e9; }
-        .card.estado-A { border-color: var(--A); background: #ffebee; }
-        .card.estado-AC { border-color: var(--AC); background: #e3f2fd; }
-        
-        /* Modal Verificación */
-        .modal { position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: white; padding: 40px; border-radius: 30px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
-        
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        button { padding: 15px 30px; border-radius: 15px; border: none; background: #34495e; color: white; font-weight: bold; cursor: pointer; }
+        :root { --P: #27ae60; --A: #c0392b; --AC: #2980b9; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .app-view { display: none; max-width: 900px; margin: auto; }
+        .active { display: block; }
+        .card-menu { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin: 15px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { background: white; padding: 10px; border-radius: 20px; border: 4px solid #ddd; cursor: pointer; }
+        .card img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
+        .estado-P { border-color: var(--P); background: #e8f5e9; }
+        .estado-A { border-color: var(--A); background: #ffebee; }
+        .estado-AC { border-color: var(--AC); background: #e3f2fd; }
+        .modal { position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 500px; }
+        button { padding: 15px; border-radius: 10px; border: none; background: #34495e; color: white; cursor: pointer; margin: 5px; }
     </style>
 </head>
 <body>
 
 <div id="view-login" class="app-view active">
-    <h1>Acceso Profesional</h1>
-    <input type="email" id="email" placeholder="Email"><br>
-    <input type="password" id="pass" placeholder="Clave"><br>
-    <button onclick="login()">INGRESAR AL SISTEMA</button>
+    <h1>ESENCIAL</h1>
+    <button class="card-menu" onclick="loginGoogle()">Ingresar con Google</button>
 </div>
 
-<div id="view-main" class="app-view">
-    <header style="display:flex; justify-content:space-between; align-items:center;">
-        <div><h2 id="titulo-sala">Cargando...</h2></div>
+<div id="view-home" class="app-view">
+    <h1>Portal Principal</h1>
+    <div class="card-menu" onclick="irA('asistencia')"><h2>📋 Asistencia</h2></div>
+    <div class="card-menu" onclick="irA('juegos')"><h2>🎮 Juegos</h2></div>
+</div>
+
+<div id="view-asistencia" class="app-view">
+    <header>
+        <h2 id="titulo-sala">Cargando...</h2>
         <input type="date" id="fecha-selector">
     </header>
-    
     <div class="grid" id="grilla"></div>
-    
-    <button style="width: 100%; background: var(--P); font-size: 1.2rem;" onclick="abrirVerificacion()">FINALIZAR ASISTENCIA Y VERIFICAR</button>
+    <button onclick="abrirVerificacion()">FINALIZAR Y VERIFICAR</button>
+    <button onclick="irA('home')" style="background:gray;">VOLVER</button>
 </div>
 
 <div id="modal-ver" class="modal">
     <div class="modal-content">
-        <h2>Verificación de Orientadora</h2>
-        <table id="tabla-ver" style="width:100%; text-align:left; border-collapse: collapse;"></table>
-        <div style="margin-top:20px;">
-            <button onclick="guardarFirebase()">CONFIRMAR GUARDADO</button>
-            <button style="background:gray;" onclick="document.getElementById('modal-ver').style.display='none'">VOLVER</button>
-        </div>
+        <h3>Verificación de Orientadora</h3>
+        <table id="tabla-ver" style="width:100%; text-align:left;"></table>
+        <button onclick="guardarFirebase()">CONFIRMAR GUARDADO</button>
+        <button onclick="document.getElementById('modal-ver').style.display='none'" style="background:gray;">CERRAR</button>
     </div>
 </div>
 
+<div id="view-juegos" class="app-view">
+    <h1>Zona de Juegos</h1>
+    <button onclick="irA('home')" style="background:gray;">VOLVER</button>
+</div>
+
 <script>
-    const firebaseConfig = { /* TU CONFIGURACION AQUÍ */ };
+    // 1. CONFIGURACIÓN (RECUERDA PEGAR TUS DATOS AQUÍ)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
+        databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com",
+        projectId: "clinicaintegral-5c488"
+    };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    let state = { mod: '', sub: '', sala: '', pacientes: {} };
-
-    function login() {
-        firebase.auth().signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value)
-        .then(() => {
-            document.getElementById('view-login').style.display = 'none';
-            document.getElementById('view-main').className = 'app-view active';
-            configurarSesion();
-        }).catch(e => alert("Error de acceso: " + e.message));
+    // 2. NAVEGACIÓN
+    function irA(vista) {
+        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-' + vista).classList.add('active');
+        if(vista === 'asistencia') configurarSesion();
     }
+
+    function loginGoogle() {
+        firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => irA('home'));
+    }
+
+    // 3. LÓGICA DE ASISTENCIA
+    let state = { mod: '', sub: '', sala: '', pacientes: {} };
 
     function configurarSesion() {
         state.mod = prompt("Modalidad (cd/cet/rehab):");
-        if(state.mod !== 'rehab') {
-            state.sub = prompt("Turno (manana/tarde/vespertino):");
-            state.sala = prompt("Sala (1/2/3/4):");
-        } else {
-            state.sub = prompt("Día (lunes/martes...):");
-        }
+        state.sub = (state.mod === 'rehab') ? prompt("Día:") : prompt("Turno:");
+        if(state.mod !== 'rehab') state.sala = prompt("Sala:");
         document.getElementById('fecha-selector').valueAsDate = new Date();
         cargarDatos();
     }
 
     function cargarDatos() {
         const path = (state.mod === 'rehab') ? `rehab/turnos/${state.sub}/pacientes` : `${state.mod}/pacientes`;
-        document.getElementById('titulo-sala').innerText = `${state.mod.toUpperCase()} | ${state.sub} | Sala ${state.sala || ''}`;
-
-        db.ref(path).once('value', snap => {
+        document.getElementById('titulo-sala').innerText = `${state.mod.toUpperCase()} | ${state.sub}`;
+        
+        firebase.database().ref(path).once('value', snap => {
             const data = snap.val();
             const grid = document.getElementById('grilla');
             grid.innerHTML = '';
-            
-            for(let nombre in data) {
-                const p = data[nombre];
-                if(state.mod !== 'rehab' && (String(p.sala) !== String(state.sala) || String(p.turno) !== String(state.sub))) continue;
-
-                state.pacientes[nombre] = 'A';
-                const urlFoto = `https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/${encodeURIComponent(nombre)}.jpg`;
-
-                grid.innerHTML += `
-                    <div class="card estado-A" id="card-${nombre.replace(/\s/g,'_')}" onclick="toggle('${nombre}')">
-                        <img src="${urlFoto}" onerror="this.src='https://via.placeholder.com/120'">
-                        <p><strong>${nombre}</strong></p>
-                    </div>`;
+            for(let n in data) {
+                if(state.mod !== 'rehab' && (String(data[n].sala) !== String(state.sala) || String(data[n].turno) !== String(state.sub))) continue;
+                state.pacientes[n] = 'A';
+                grid.innerHTML += `<div class="card estado-A" id="card-${n.replace(/\s/g,'_')}" onclick="toggle('${n}')">
+                    <img src="https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/${encodeURIComponent(n)}.jpg" onerror="this.src='https://via.placeholder.com/100'">
+                    <p>${n}</p></div>`;
             }
         });
     }
 
-    function toggle(nombre) {
-        // Estímulos
-        if(navigator.vibrate) navigator.vibrate(100);
-        new AudioContext().createOscillator().start(); // feedback auditivo breve
-
-        const el = document.getElementById(`card-${nombre.replace(/\s/g,'_')}`);
-        let cur = state.pacientes[nombre];
-        
-        // Ciclo clínico: A (Rojo) -> P (Verde) -> AC (Azul) -> A
-        if(cur === 'A') cur = 'P';
-        else if(cur === 'P') cur = 'AC';
-        else cur = 'A';
-        
-        state.pacientes[nombre] = cur;
-        el.className = `card estado-${cur}`;
+    function toggle(n) {
+        let cur = state.pacientes[n];
+        cur = (cur === 'A') ? 'P' : (cur === 'P') ? 'AC' : 'A';
+        state.pacientes[n] = cur;
+        document.getElementById(`card-${n.replace(/\s/g,'_')}`).className = `card estado-${cur}`;
     }
 
     function abrirVerificacion() {
         document.getElementById('modal-ver').style.display='flex';
-        const tabla = document.getElementById('tabla-ver');
-        tabla.innerHTML = '<tr><th style="padding:10px; border-bottom:1px solid #ccc;">Nombre</th><th style="padding:10px; border-bottom:1px solid #ccc;">Estado</th></tr>';
-        for(let n in state.pacientes) {
-            tabla.innerHTML += `<tr><td style="padding:10px;">${n}</td><td style="padding:10px;">${state.pacientes[n]}</td></tr>`;
-        }
+        let tabla = document.getElementById('tabla-ver');
+        tabla.innerHTML = '<tr><th>Nombre</th><th>Estado</th></tr>';
+        for(let n in state.pacientes) tabla.innerHTML += `<tr><td>${n}</td><td>${state.pacientes[n]}</td></tr>`;
     }
 
     function guardarFirebase() {
         const fecha = document.getElementById('fecha-selector').value;
         const updates = {};
-        for(let n in state.pacientes) {
-            updates[`asistencias/${fecha}/${state.mod}/${state.sub}/${state.sala || ''}/${n}`] = state.pacientes[n];
-        }
-        db.ref().update(updates).then(() => {
-            alert("¡Registro guardado con éxito!");
-            document.getElementById('modal-ver').style.display='none';
-        });
+        for(let n in state.pacientes) updates[`asistencias/${fecha}/${state.mod}/${state.sub}/${state.sala || ''}/${n}`] = state.pacientes[n];
+        firebase.database().ref().update(updates).then(() => { alert("Guardado"); document.getElementById('modal-ver').style.display='none'; });
     }
 </script>
 </body>
