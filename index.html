@@ -99,13 +99,37 @@
         .toast-show { bottom: 40px !important; }
 
         /* Modal Resumen */
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); z-index: 999; }
-        .modal-box { background: white; padding: 40px; border-radius: 35px; width: 90%; max-width: 500px; text-align: center; }
-        .modal-box table { width: 100%; font-size: 1.2rem; margin-bottom: 20px; }
-        .modal-box th { border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .modal-box td { padding: 10px 0; font-weight: bold; }
+        /* Modal Resumen - Versión corregida y amigable */
+.modal { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.7); 
+    display: none; 
+    align-items: flex-start; /* Permite que el contenido empiece arriba */
+    justify-content: center; 
+    overflow-y: auto;        /* Habilita el scroll vertical si el modal es muy largo */
+    backdrop-filter: blur(5px); 
+    z-index: 9999;           /* Asegura que siempre esté por encima de todo */
+    padding: 20px 0;         /* Espacio arriba y abajo */
+}
 
-    </style>
+.modal-box { 
+    background: white; 
+    padding: 30px; 
+    border-radius: 35px; 
+    width: 90%; 
+    max-width: 500px; 
+    text-align: center; 
+    margin: 20px auto;       /* Centrado */
+}
+
+.modal-box table { width: 100%; font-size: 1.1rem; margin-bottom: 20px; border-collapse: collapse; }
+.modal-box td { padding: 12px 5px; font-weight: bold; border-bottom: 1px solid #f0f0f0; }
+
+</style>
 </head>
 <body>
 
@@ -322,20 +346,28 @@
 
     // Resumen antes de guardar
     function verificar() {
-        document.getElementById('modal').style.display = 'flex';
-        let t = document.getElementById('tabla-ver');
-        t.innerHTML = '';
+    document.getElementById('modal').style.display = 'flex';
+    let t = document.getElementById('tabla-ver');
+    t.innerHTML = '';
+    
+    for(let n in state.pacientes) {
+        let estado = state.pacientes[n];
+        let color = estado === 'P' ? 'var(--color-P)' : (estado === 'A' ? 'var(--color-A)' : 'var(--color-AC)');
+        let emoji = estado === 'P' ? '✔️' : (estado === 'A' ? '❌' : '🔵');
         
-        for(let n in state.pacientes) {
-            let color = state.pacientes[n] === 'P' ? 'var(--color-P)' : (state.pacientes[n] === 'A' ? 'var(--color-A)' : 'var(--color-AC)');
-            let emoji = state.pacientes[n] === 'P' ? '✔️' : (state.pacientes[n] === 'A' ? '❌' : '🔵');
-            
-            t.innerHTML += `<tr>
-                <td>${n}</td>
-                <td style="color: ${color}; font-size: 1.5rem;">${emoji} ${state.pacientes[n]}</td>
-            </tr>`;
-        }
+        // Agregamos un onclick en cada fila para que puedas cambiar el estado ahí mismo
+        t.innerHTML += `<tr onclick="cambiarEnModal('${n}')" style="cursor:pointer;">
+            <td style="text-align:left;">${n}</td>
+            <td style="color: ${color};">${emoji} ${estado}</td>
+        </tr>`;
     }
+}
+
+// Nueva función para cambiar el estado dentro del modal y refrescar la tabla
+function cambiarEnModal(n) {
+    toggle(n); // Usa tu lógica original de cambio
+    verificar(); // Refresca la tabla del modal inmediatamente
+}
 
     // Guardado Final optimizado para la IA y Celebración con confeti
     function guardar() {
