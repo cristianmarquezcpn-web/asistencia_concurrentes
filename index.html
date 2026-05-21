@@ -213,15 +213,22 @@
     }
 
     // Autenticación (con Redirect para evitar bloqueos)
-    function login() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        firebase.auth().signInWithRedirect(provider);
-    }
+    // Nueva función de login con Popup
+function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            if (result.user) {
+                // Si el inicio de sesión es exitoso, entra a la app
+                irA('home');
+            }
+        }).catch((error) => {
+            console.error("Error de autenticación:", error);
+            alert("Error: " + error.message);
+        });
+}
 
-    firebase.auth().getRedirectResult().then((result) => {
-        if (result.user) irA('home');
-    }).catch(error => console.error(error));
-
+    
     // Lógica de Selectores Dinámicos
     function actualizarTurnos() {
         const mod = document.getElementById('sel-mod').value;
