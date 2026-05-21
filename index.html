@@ -318,21 +318,45 @@
         if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno.🤷‍♂️</h2>';
     }
 
-    // Lógica de Toque (Rotar estados con animación pop y estímulos)
-    function toggle(n) {
-    // 1. DISPARAR FEEDBACK SENSORIAL (Vibración y Sonido)
-    feedbackSensorial();
+    // Definición de la función - Debe estar arriba
+function feedbackSensorial() {
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+    
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {
+        console.warn("Audio bloqueado por el navegador");
+    }
+}
+ function toggle(n) {
+    // Llamada segura
+    if (typeof feedbackSensorial === 'function') {
+        feedbackSensorial();
+    }
     
     let el = document.getElementById(`c-${n.replace(/\s/g,'_')}`);
     let lbl = document.getElementById(`lbl-${n.replace(/\s/g,'_')}`);
     
-    // Efecto visual pop
+    // ... resto de tu lógica ...
     el.classList.remove('pop-anim');
-    void el.offsetWidth; // Forzar reinicio de animación
+    void el.offsetWidth;
     el.classList.add('pop-anim');
     mostrarEstimulo();
 
-    // Rotamos: A -> P -> AC -> A
     if (state.pacientes[n] === 'A') {
         state.pacientes[n] = 'P';
         lbl.innerText = '✔️ P';
