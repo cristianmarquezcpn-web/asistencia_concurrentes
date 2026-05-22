@@ -51,12 +51,6 @@
         <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;"></select>
     </div>
 
-    <div style="margin-top:20px; text-align:center;">
-        <button class="btn-game" style="background:var(--color-AC);" onclick="irA('juegos')">
-            🚀 Entrar a la Zona de Juegos
-        </button>
-    </div>
-
     <div class="grid" id="grilla"></div>
     <br>
     <button onclick="window.location.href='index.html'" style="width:100%; padding:20px; border-radius:20px; border:none; background:#95a5a6; color:white; font-weight:bold;">⬅ Volver a Asistencia</button>
@@ -69,7 +63,7 @@
         <br>
         <button onclick="irA('selector')" class="btn-game" style="background:#bdc3c7;">⬅ Cambiar de compañero</button>
     </div>
-</div>    
+</div>
 <script>
 // 1. Inicialización de Firebase
 const firebaseConfig = {
@@ -101,10 +95,6 @@ if(config) {
 
 // 4. Navegación
 function irA(v) {
-    if (v === 'selector') {
-        window.location.href = 'index.html';
-        return;
-    }
     document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
     const target = document.getElementById('view-' + v);
     if (target) target.classList.add('active');
@@ -162,72 +152,87 @@ function adaptarSelectores() {
     const mod = document.getElementById('sel-mod').value;
     const selTurno = document.getElementById('sel-turno');
     const containerSala = document.getElementById('container-sala');
+    
+    // REGLA: CD y CET usan salas. Rehab no usa salas.
     containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
+
+    // REGLA: CD y CET usan [mañana, tarde, vespertino]. Rehab usa [Lunes...Viernes].
     selTurno.innerHTML = '';
-    const opciones = (mod === 'rehab') ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] : ['manana', 'tarde', 'vespertino'];
-    opciones.forEach(op => {
+    const opts = (mod === 'rehab') 
+        ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] 
+        : ['manana', 'tarde', 'vespertino'];
+
+    opts.forEach(op => {
         const label = (mod === 'rehab') ? op : op.charAt(0).toUpperCase() + op.slice(1);
         selTurno.innerHTML += `<option value="${op}">${label}</option>`;
     });
-    setTimeout(cargarDatos, 50);
+    
+    // Refrescamos la grilla
+    cargarDatos();
 }
- // El mismo bucle exacto que tenés en tu index.html
-    async function cargarDatos() {
-        const mod = document.getElementById('sel-mod').value;
-        const sala = document.getElementById('sel-sala').value;
-        const turno = document.getElementById('sel-turno').value;
-        const grid = document.getElementById('grilla');
+ async function cargarDatos() {
+    const mod = document.getElementById('sel-mod').value;
+    const sala = document.getElementById('sel-sala').value;
+    const turno = document.getElementById('sel-turno').value;
+    const grid = document.getElementById('grilla');
 
-        if (!turno) return; 
+    // Si no hay turno seleccionado, salimos pero limpiamos la grilla
+    if (!turno) { grid.innerHTML = ''; return; }
 
-        grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
+    grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
+    
+    // Ruta: Rehab busca por turno (Lunes, Martes...), CD/CET busca en la base general de pacientes
+    let refPath = (mod === 'rehab') ? `rehab/turnos/${turno}` : `${mod}/pacientes`;
+    
+    try {
+        const snap = await db.ref(refPath).once('value');
+        const todos = snap.val();
         
-        let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
-        
-        try {
-            const snap = await db.ref(refPath).once('value');
-            const todos = snap.val();
-            
-            if(!todos) {
-                grid.innerHTML = `<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>`;
-                return;
-            }
-
-            grid.innerHTML = '';
-            let encontrados = 0;
-            let procesados = {}; 
-            const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
-
-            for (let key in todos) {
-                let nombre = (mod === 'rehab') ? todos[key] : key;
-                
-                if (procesados[nombre]) continue; // Salta si ya está
-                
-                let p = (mod === 'rehab') ? { turno: turno } : todos[key];
-                const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
-
-                if (coincide) {
-                    procesados[nombre] = true;
-                    encontrados++;
-                    
-                    const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
-                    
-                    grid.innerHTML += `
-                        <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
-                            <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
-                            <p>${nombre}</p>
-                        </div>`;
-                }
-            }
-
-            if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
-
-        } catch (e) {
-            console.error(e);
-            grid.innerHTML = '<h2>Error conectando a la base de datos.</h2>';
+        if(!todos) {
+            grid.innerHTML = `<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>`;
+            return;
         }
-    }
 
+        grid.innerHTML = '';
+        let encontrados = 0;
+        let procesados = {}; 
+        window.listaPacientes = []; // Actualizamos la lista global para los juegos
+
+        for (let key in todos) {
+            let nombre = (mod === 'rehab') ? todos[key] : key;
+            
+            if (procesados[nombre]) continue; 
+            
+            // Para CD y CET, 'todos[key]' es el objeto que contiene sala y turno
+            // Para Rehab, no hay objeto, solo el nombre, así que creamos un objeto temporal
+            let p = (mod === 'rehab') ? { turno: turno } : todos[key];
+            
+            // Lógica unificada:
+            // Rehab ignora sala. CD y CET validan que sala y turno coincidan.
+            const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+
+            if (coincide) {
+                procesados[nombre] = true;
+                encontrados++;
+                window.listaPacientes.push(nombre); // Guardamos para el juego
+                
+                const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+                
+                grid.innerHTML += `
+                    <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
+                        <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                        <p>${nombre}</p>
+                    </div>`;
+            }
+        }
+
+        if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<h2>Error conectando a la base de datos.</h2>';
+    }
+}
   function juegoRompecabezas(u) {
     document.getElementById('pantalla-juego').innerHTML = `
         <h3 style="margin-bottom:15px;">¡Armemos la imagen!</h3>
