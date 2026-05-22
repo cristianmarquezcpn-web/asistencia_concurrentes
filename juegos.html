@@ -72,26 +72,24 @@
 
     function adaptarSelectores() {
     const mod = document.getElementById('sel-mod').value;
-    const selSala = document.getElementById('sel-sala');
-    const containerSala = document.getElementById('container-sala');
     const selTurno = document.getElementById('sel-turno');
+    const containerSala = document.getElementById('container-sala');
     
-    // 1. Lógica para Ocultar/Mostrar Sala
-    if (mod === 'rehab') {
-        containerSala.style.display = 'none'; // Oculta la sala
-    } else {
-        containerSala.style.display = 'block'; // Muestra la sala
-    }
+    // Ocultar sala si es rehab
+    containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
 
-    // 2. Lógica para Turnos vs Días
+    // Cargar turnos con todos los horarios
     selTurno.innerHTML = '';
     if (mod === 'rehab') {
-        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-        dias.forEach(d => selTurno.innerHTML += `<option value="${d}">${d}</option>`);
+        ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].forEach(d => 
+            selTurno.innerHTML += `<option value="${d}">${d}</option>`);
     } else {
-        selTurno.innerHTML = '<option value="Mañana">Mañana</option><option value="Tarde">Tarde</option>';
+        // Aquí agregamos los 3 turnos
+        selTurno.innerHTML = `
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Vespertino">Vespertino</option>`;
     }
-    
     cargarDatos();
 }
 
