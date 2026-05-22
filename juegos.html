@@ -4,64 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESENCIAL | Zona de Juegos</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
     <style>
-        :root { --primary: #ff6b6b; --secondary: #4ecdc4; --accent: #ffe66d; }
-        body { font-family: 'Nunito', sans-serif; background: #2d3436; color: white; margin: 0; padding: 20px; }
-        h1, h2 { font-family: 'Fredoka One', cursive; text-align: center; }
-        .view { display: none; max-width: 800px; margin: auto; }
+        :root { --color-P: #27ae60; --color-A: #e74c3c; --color-AC: #3498db; --bg: #f4f9f9; }
+        body { font-family: 'Nunito', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #2c3e50; }
+        .view { display: none; max-width: 900px; margin: auto; }
         .active { display: block; }
-        .btn-game { background: var(--secondary); border: none; padding: 20px; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 10px; width: 100%; max-width: 300px; }
-        .btn-game:hover { transform: scale(1.05); filter: brightness(1.2); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
-        .p-card { background: white; color: #2d3436; padding: 10px; border-radius: 20px; cursor: pointer; text-align: center; border: 5px solid white; }
-        .p-card img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
-        #pantalla-juego { text-align: center; margin-top: 20px; }
-        .puzzle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: 250px; margin: auto; }
-        .puzzle-piece { width: 120px; height: 120px; background-size: 200% 200%; border: 2px solid white; cursor: pointer; }
-        .gray { filter: grayscale(100%); transition: 0.5s; }
-        .memory-card { width: 100px; height: 100px; background: var(--primary); border-radius: 15px; display: inline-block; margin: 5px; cursor: pointer; }
+        
+        /* Estilos fluidos */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; margin-top: 20px; }
+        .p-card { background: white; padding: 15px; border-radius: 30px; border: 6px solid #eee; cursor: pointer; text-align: center; box-shadow: 0 8px 15px rgba(0,0,0,0.05); transition: 0.3s; }
+        .p-card:hover { transform: scale(1.03); border-color: var(--color-AC); }
+        .p-card img { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; }
+
+        .juego-container { background: white; padding: 40px; border-radius: 40px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-game { padding: 20px 30px; border-radius: 25px; border: none; font-size: 1.1rem; font-weight: 900; margin: 10px; cursor: pointer; transition: 0.3s; color: white; }
+        
+        /* Animaciones */
+        @keyframes sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+        .sway { animation: sway 0.3s ease-in-out infinite; }
     </style>
 </head>
 <body>
 
 <div id="view-selector" class="view active">
-    <h1>🎮 ZONA DE JUEGOS</h1>
-    
+    <h1 style="text-align:center;">🎮 Zona de Juegos</h1>
     <div class="controles-header" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
         <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
-
         <div id="container-sala">
             <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
-                <option value="1">Sala 1</option>
-                <option value="2">Sala 2</option>
-                <option value="3">Sala 3</option>
-                <option value="4">Sala 4</option>
+                <option value="1">Sala 1</option><option value="2">Sala 2</option><option value="3">Sala 3</option><option value="4">Sala 4</option>
             </select>
         </div>
-
         <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;"></select>
     </div>
-
     <div class="grid" id="grilla"></div>
-    <br><button onclick="window.location.href='index.html'" class="btn-game" style="background:#636e72">⬅ Volver a Asistencia</button>
+    <br><button onclick="window.location.href='index.html'" style="width:100%; padding:20px; border-radius:20px; border:none; background:#95a5a6; color:white; font-weight:bold;">⬅ Volver a Asistencia</button>
 </div>
 
 <div id="view-juego" class="view">
-    <h2 id="titulo-juego">Jugando...</h2>
-    <div id="pantalla-juego"></div>
-    <br><button onclick="irA('selector')" class="btn-game">⬅ Cambiar de Paciente</button>
+    <div class="juego-container">
+        <h2 id="titulo-juego"></h2>
+        <div id="pantalla-juego" style="min-height: 350px; display:flex; align-items:center; justify-content:center; flex-direction:column;"></div>
+        <br><button onclick="irA('selector')" class="btn-game" style="background:#bdc3c7;">⬅ Cambiar de compañero</button>
+    </div>
 </div>
-
 <script>
+    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
     const firebaseConfig = {
         apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
         authDomain: "clinicaintegral-5c488.firebaseapp.com",
@@ -164,53 +163,162 @@
     }
 
     // --- Funciones de los Juegos ---
-    function menuJuegos(n, u) {
-        document.getElementById('titulo-juego').innerText = "¡Juega con " + n + "!";
-        document.getElementById('pantalla-juego').innerHTML = `
-            <button class="btn-game" onclick="juegoAnimales('${u}')">🐶 Animales</button>
-            <button class="btn-game" onclick="juegoRompecabezas('${u}')">🧩 Rompecabezas</button>
-            <button class="btn-game" onclick="juegoPintar('${u}')">🎨 Pintar</button>
-            <button class="btn-game" onclick="juegoMemoria()">🧠 Memoria</button>
-        `;
-        irA('juego');
-    }
-
-    function juegoAnimales(u) {
-        document.getElementById('pantalla-juego').innerHTML = `
-            <div style="position:relative; display:inline-block;">
-                <img src="${u}" style="width:200px; border-radius:20px;">
-                <div id="emoji" style="position:absolute; top:-40px; left:50%; transform:translateX(-50%); font-size:80px;"></div>
-            </div><div id="btn-animales"></div>`;
-        const anim = [['🐮','vaca'],['🐱','gato'],['🐶','perro'],['🐴','caballo'],['🦆','pato']];
-        anim.forEach(a => {
-            document.getElementById('btn-animales').innerHTML += `<button onclick="usarAnimal('${a[0]}','${a[1]}')" style="font-size:2rem; width:60px; height:60px; border-radius:50%; border:none; margin:5px;">${a[0]}</button>`;
-        });
-    }
-
-    function usarAnimal(e, s) {
-        document.getElementById('emoji').innerText = e;
-        new Audio(`https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/sonidos_animales/${s}.mp3`).play();
-    }
-
+   function menuJuegos(n, u) {
+    document.getElementById('titulo-juego').innerText = "Jugando con " + n;
+    document.getElementById('pantalla-juego').innerHTML = `
+        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoAnimales('${u}')">🐶 Animales</button>
+        <button class="btn-game" style="background:var(--color-P);" onclick="juegoPintar('${u}')">🎨 Pintar</button>
+        <button class="btn-game" style="background:#f39c12;" onclick="juegoRompecabezas('${u}')">🧩 Rompecabezas</button>
+        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoMemoria('${n}')">🧠 ¿Quién es?</button>
+    `;
+    irA('juego');
+}
     function juegoRompecabezas(u) {
-        document.getElementById('pantalla-juego').innerHTML = `<div class="puzzle-grid" id="puzzle"></div>`;
-        for(let i=0; i<4; i++) {
-            document.getElementById('puzzle').innerHTML += `<div class="puzzle-piece" style="background-image:url(${u}); background-position: ${i%2==0 ? '0%' : '100%'} ${i<2 ? '0%' : '100%'}" onclick="this.style.border='4px solid var(--accent)'"></div>`;
-        }
+    document.getElementById('pantalla-juego').innerHTML = `
+        <h3 style="margin-bottom:15px;">¡Armemos la imagen!</h3>
+        <div id="puzzle-container" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; width:260px; margin:auto;"></div>
+    `;
+
+    const container = document.getElementById('puzzle-container');
+    const piezas = [
+        {pos: '0% 0%'}, {pos: '100% 0%'},
+        {pos: '0% 100%'}, {pos: '100% 100%'}
+    ];
+
+    piezas.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'puzzle-piece';
+        div.style.cssText = `
+            width:120px; height:120px; background-image:url(${u}); 
+            background-size:200% 200%; background-position:${p.pos};
+            border-radius:15px; cursor:pointer; border:4px solid #ddd;
+            transition:0.5s; opacity:0.6;
+        `;
+        
+        div.onclick = function() {
+            this.style.opacity = '1';
+            this.style.border = '4px solid var(--secondary)';
+            this.style.transform = 'scale(1.05)';
+            // Sonido de pieza encajando
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play();
+            
+            // Verificación simple de victoria
+            if(document.querySelectorAll('.puzzle-piece[style*="opacity: 1"]').length === 4) {
+                setTimeout(() => confetti({ particleCount: 150, spread: 100 }), 500);
+            }
+        };
+        container.appendChild(div);
+    });
+}
+    function juegoAnimales(foto) {
+    // Definimos los animales en una lista para que sea fácil agregar más
+    const animales = [
+        {emoji: '🐮', id: 'vaca'},
+        {emoji: '🐱', id: 'gato'},
+        {emoji: '🐶', id: 'perro'},
+        {emoji: '🐴', id: 'caballo'},
+        {emoji: '🦆', id: 'pato'}
+    ];
+
+    let botonesHtml = '';
+    animales.forEach(a => {
+        botonesHtml += `
+            <button onclick="sonar('${a.id}')" style="font-size:3rem; border:none; background:none; cursor:pointer; transition:0.2s; margin:5px;">
+                ${a.emoji}
+            </button>`;
+    });
+
+    document.getElementById('pantalla-juego').innerHTML = `
+        <img id="img-sway" src="${foto}" style="width:160px; height:160px; border-radius:50%; border:8px solid var(--color-AC); object-fit:cover;">
+        <div style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:center;">
+            ${botonesHtml}
+        </div>`;
+}
+
+    function sonar(a) {
+        const i = document.getElementById('img-sway');
+        i.classList.add('sway');
+        new Audio(`https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/sonidos_animales/${a}.mp3`).play();
+        setTimeout(() => i.classList.remove('sway'), 1500);
     }
 
-    function juegoPintar(u) {
-        document.getElementById('pantalla-juego').innerHTML = `<img src="${u}" class="gray" onclick="this.classList.remove('gray')" style="width:200px; border-radius:20px; cursor:pointer;">`;
-    }
+   function juegoPintar(foto) {
+    document.getElementById('pantalla-juego').innerHTML = `
+        <h3 style="margin-bottom:10px;">¡Dale color a la foto!</h3>
+        <div id="canvas-container" style="position:relative; width:180px; height:180px; margin:auto;">
+            <img src="${foto}" id="img-base" style="width:180px; border-radius:30px; filter:grayscale(100%); transition:1.5s;">
+        </div>
+        <div id="paleta" style="margin-top:20px; display:flex; justify-content:center; gap:10px;"></div>
+    `;
 
-    function juegoMemoria() {
-        document.getElementById('pantalla-juego').innerHTML = `
-            <div style="display:flex; justify-content:center; gap:15px; margin-top:20px;">
-                <div class="memory-card" onclick="this.style.background='white'"></div>
-                <div class="memory-card" onclick="this.style.background='white'"></div>
-            </div>`;
-    }
+    const colores = ['#e74c3c', '#f1c40f', '#27ae60', '#3498db', '#9b59b6'];
+    const paleta = document.getElementById('paleta');
 
+    colores.forEach(c => {
+        const btn = document.createElement('button');
+        btn.style.cssText = `
+            width:60px; height:60px; border-radius:50%; border:4px solid white; 
+            background:${c}; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        `;
+        
+        btn.onclick = function() {
+            // Efecto de pincelada
+            const img = document.getElementById('img-base');
+            img.style.filter = 'grayscale(0%)'; // Revela el color
+            img.style.borderColor = c; // El borde toma el color del pincel
+            
+            // Sonido de pincel real
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3').play();
+            
+            // Feedback de selección
+            document.querySelectorAll('#paleta button').forEach(b => b.style.transform = 'scale(1)');
+            this.style.transform = 'scale(1.2)';
+        };
+        paleta.appendChild(btn);
+    });
+}
+
+    function juegoMemoria(nombreActual) {
+    // 1. Obtenemos un grupo de pacientes (incluyendo al actual para que sea la respuesta)
+    // Usamos el objeto state.pacientes que ya tenés cargado de la asistencia
+    let listaNombres = Object.keys(state.pacientes);
+    
+    // Mezclamos y elegimos el objetivo + 2 distractores
+    let objetivo = nombreActual;
+    let opciones = [objetivo];
+    
+    while(opciones.length < 3) {
+        let azar = listaNombres[Math.floor(Math.random() * listaNombres.length)];
+        if(!opciones.includes(azar)) opciones.push(azar);
+    }
+    opciones.sort(() => Math.random() - 0.5); // Mezclar opciones
+
+    let html = `<h3 style="margin-bottom:20px;">¿A quién buscamos?</h3>
+                <img src="${baseFotoPath}${encodeURIComponent(objetivo)}.jpg" style="width:120px; height:120px; border-radius:50%; border:6px solid var(--color-AC); margin-bottom:20px;">
+                <div style="display:flex; justify-content:center; gap:15px;">`;
+    
+    opciones.forEach(n => {
+        html += `<img src="${baseFotoPath}${encodeURIComponent(n)}.jpg" 
+                 style="width:100px; height:100px; border-radius:20px; cursor:pointer; border:4px solid #ddd;"
+                 onclick="verificarMemoria('${n}', '${objetivo}')">`;
+    });
+    
+    html += `</div>`;
+    document.getElementById('pantalla-juego').innerHTML = html;
+}
+
+function verificarMemoria(seleccion, objetivo) {
+    if(seleccion === objetivo) {
+        // Victoria: Feedback visual y sonoro
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        alert("¡Excelente asociación!");
+    } else {
+        // Error leve: Solo un temblor
+        event.target.style.animation = "sway 0.3s";
+        setTimeout(() => event.target.style.animation = "", 300);
+    }
+}
     function irA(v) {
         document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
         document.getElementById('view-'+v).classList.add('active');
