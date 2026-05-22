@@ -108,6 +108,8 @@ function menuJuegos(n, u) {
         <button class="btn-game" style="background:var(--color-P);" onclick="juegoPintar('${u}')">🎨 Pintar</button>
         <button class="btn-game" style="background:#f39c12;" onclick="juegoRompecabezas('${u}')">🧩 Rompecabezas</button>
         <button class="btn-game" style="background:var(--color-AC);" onclick="juegoMemoria('${n}')">🧠 ¿Quién es?</button>
+        <button class="btn-game" style="background:#2ecc71;" onclick="juegoLightBox('${u}')">✨ Light Box</button>
+        <button class="btn-game" style="background:#3498db;" onclick="juegoSimon('${u}')">🎹 Simón Dice</button>
     `;
     irA('juego');
 }
@@ -330,6 +332,49 @@ function adaptarSelectores() {
         paleta.appendChild(btn);
     });
 }
+    function juegoLightBox(u) {
+    document.getElementById('pantalla-juego').innerHTML = `
+        <div id="canvas-sensorial" style="width:100%; height:400px; background:#2c3e50; border-radius:15px; cursor:pointer;"></div>
+    `;
+    
+    const canvas = document.getElementById('canvas-sensorial');
+    canvas.onclick = () => {
+        // Colores suaves
+        const colores = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F7FFF7'];
+        const color = colores[Math.floor(Math.random() * colores.length)];
+        canvas.style.backgroundColor = color;
+        
+        // Sonido suave (usando un oscilador)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine'; // Tono suave
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5); // Duración corta
+        
+        // Vibración (si el dispositivo es móvil)
+        if (navigator.vibrate) navigator.vibrate(100);
+    };
+    }
+    function juegoSimon(u) {
+    let secuencia = [];
+    document.getElementById('pantalla-juego').innerHTML = `
+        <h3>Presiona los botones en orden</h3>
+        <div id="simon-container">
+            <button onclick="registrarSimon(1)" style="background:var(--color-P); padding:20px; border-radius:50%; margin:10px;">🔴</button>
+            <button onclick="registrarSimon(2)" style="background:var(--color-AC); padding:20px; border-radius:50%; margin:10px;">🔵</button>
+        </div>
+    `;
+
+    window.registrarSimon = (n) => {
+        secuencia.push(n);
+        // Aquí podrías agregar un sonido de éxito suave
+        console.log("Secuencia guardada: " + secuencia);
+        // Enviar a tu base de datos el progreso final
+        db.ref('juegos/' + u).push({ juego: 'Simon', nivel: secuencia.length, fecha: Date.now() });
+    };
+    }
     // Esto asegura que al cargar la página, se ejecuten los selectores
     window.onload = function() {
         adaptarSelectores();
