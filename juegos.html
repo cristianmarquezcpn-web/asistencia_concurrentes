@@ -275,37 +275,57 @@ function adaptarSelectores() {
     });
 }
   function juegoAnimales(foto) {
-    // Definimos los animales en una lista para que sea fácil agregar más
+    // Definimos los animales. 'tieneImagen' indica si existe el archivo PNG.
     const animales = [
-        {emoji: '🐮', id: 'vaca'},
-        {emoji: '🐱', id: 'gato'},
-        {emoji: '🐶', id: 'perro'},
-        {emoji: '🐴', id: 'caballo'},
-        {emoji: '🦆', id: 'pato'}
+        {emoji: '🐮', id: 'vaca', tieneImagen: false},
+        {emoji: '🐱', id: 'gato', tieneImagen: true},
+        {emoji: '🐶', id: 'perro', tieneImagen: true},
+        {emoji: '🐴', id: 'caballo', tieneImagen: false},
+        {emoji: '🦆', id: 'pato', tieneImagen: true}
     ];
 
     let botonesHtml = '';
     animales.forEach(a => {
         botonesHtml += `
-            <button onclick="sonar('${a.id}')" style="font-size:3rem; border:none; background:none; cursor:pointer; transition:0.2s; margin:5px;">
+            <button onclick="sonar('${a.id}', ${a.tieneImagen})" style="font-size:3rem; border:none; background:none; cursor:pointer; transition:0.2s; margin:5px;">
                 ${a.emoji}
             </button>`;
     });
 
     document.getElementById('pantalla-juego').innerHTML = `
-        <img id="img-sway" src="${foto}" style="width:160px; height:160px; border-radius:50%; border:8px solid var(--color-AC); object-fit:cover;">
+        <div id="contenedor-foto" style="position:relative; display:inline-block;">
+            <img id="img-sway" src="${foto}" style="width:160px; height:160px; border-radius:50%; border:8px solid var(--color-AC); object-fit:cover;">
+            <img id="filtro-animal" src="" style="position:absolute; top:-20px; left:0; width:160px; display:none; pointer-events:none;">
+        </div>
         <div style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:center;">
             ${botonesHtml}
         </div>`;
 }
 
-    function sonar(a) {
-        const i = document.getElementById('img-sway');
-        i.classList.add('sway');
-        new Audio(`https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/sonidos_animales/${a}.mp3`).play();
-        setTimeout(() => i.classList.remove('sway'), 1500);
+function sonar(id, tieneImagen) {
+    const i = document.getElementById('img-sway');
+    const filtro = document.getElementById('filtro-animal');
+    
+    // 1. Efecto de movimiento
+    i.classList.add('sway');
+    
+    // 2. Manejo del filtro (si tiene imagen, la mostramos)
+    if (tieneImagen) {
+        filtro.src = `https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/Imagen/${id}.png`;
+        filtro.style.display = 'block';
+    } else {
+        filtro.style.display = 'none';
     }
 
+    // 3. Audio
+    new Audio(`https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/sonidos_animales/${id}.mp3`).play();
+    
+    // 4. Limpieza
+    setTimeout(() => {
+        i.classList.remove('sway');
+        filtro.style.display = 'none';
+    }, 1500);
+}
  function juegoPintar(foto) {
     document.getElementById('pantalla-juego').innerHTML = `
         <h3 style="margin-bottom:10px;">¡Dale color a la foto!</h3>
