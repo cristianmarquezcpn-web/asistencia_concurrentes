@@ -147,17 +147,18 @@ function registrarProgreso(nombre, juego, res) {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     });
 }
-
 function adaptarSelectores() {
     const mod = document.getElementById('sel-mod').value;
     const selTurno = document.getElementById('sel-turno');
     const containerSala = document.getElementById('container-sala');
     
-    // REGLA: CD y CET usan salas. Rehab no usa salas.
+    // 1. Manejo de la Sala: Solo se oculta en Rehab
     containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
 
-    // REGLA: CD y CET usan [mañana, tarde, vespertino]. Rehab usa [Lunes...Viernes].
+    // 2. Manejo del Turno: SIEMPRE visible, pero con opciones distintas según el modo
+    selTurno.style.display = 'block'; 
     selTurno.innerHTML = '';
+    
     const opts = (mod === 'rehab') 
         ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] 
         : ['manana', 'tarde', 'vespertino'];
@@ -167,10 +168,11 @@ function adaptarSelectores() {
         selTurno.innerHTML += `<option value="${op}">${label}</option>`;
     });
     
-    // Refrescamos la grilla
+    // 3. Cargamos los datos inmediatamente
     cargarDatos();
 }
- async function cargarDatos() {
+
+    async function cargarDatos() {
     const mod = document.getElementById('sel-mod').value;
     const sala = document.getElementById('sel-sala').value;
     const turno = document.getElementById('sel-turno').value;
@@ -328,6 +330,10 @@ function adaptarSelectores() {
         paleta.appendChild(btn);
     });
 }
+    // Esto asegura que al cargar la página, se ejecuten los selectores
+    window.onload = function() {
+        adaptarSelectores();
+    };
 </script>
 </body>
 </html>
