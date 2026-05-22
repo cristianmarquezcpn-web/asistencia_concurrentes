@@ -71,87 +71,107 @@
     </div>
 </div>    
 <script>
-   function irA(v) {
-        if (v === 'juegos') {
-            const mod = document.getElementById('sel-mod').value;
-            const sala = document.getElementById('sel-sala').value;
-            
-            // Guardamos la ubicación para que el juego sepa a quién buscar
-            localStorage.setItem('configJuego', JSON.stringify({mod, sala}));
-            
-            // Saltamos al archivo de juegos
-            window.location.href = 'juegos.html';
-            return;
-        }
+// 1. Inicialización de Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
+    authDomain: "clinicaintegral-5c488.firebaseapp.com",
+    databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com",
+    projectId: "clinicaintegral-5c488"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
 
-        // Navegación interna normal
-        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-        document.getElementById('view-'+v).classList.add('active');
-   } 
-    // Variable global para que el juego sepa quiénes son los compañeros
+// 2. Variable global
 window.listaPacientes = [];
 
-// Recuperamos el contexto y cargamos los nombres de los compañeros
+// 3. Cargar al iniciar
 const config = JSON.parse(localStorage.getItem('configJuego'));
-
 if(config) {
     let ruta = (config.mod === 'rehab') ? 'rehab/turnos/Lunes' : `${config.mod}/pacientes`;
-    firebase.database().ref(ruta).once('value').then(snap => {
+    db.ref(ruta).once('value').then(snap => {
         const data = snap.val();
-        // Filtramos por sala o tomamos todos si es rehab
-        if (config.mod !== 'rehab') {
-            window.listaPacientes = Object.keys(data).filter(n => String(data[n].sala) === config.sala);
-        } else {
-            window.listaPacientes = Object.values(data);
+        if (data) {
+            window.listaPacientes = (config.mod !== 'rehab') 
+                ? Object.keys(data).filter(n => String(data[n].sala) === config.sala)
+                : Object.values(data);
         }
     });
 }
-    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
-    const firebaseConfig = {
-        apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
-        authDomain: "clinicaintegral-5c488.firebaseapp.com",
-        databaseURL: "https://clinicaintegral-5c488-default-rtdb.firebaseio.com",
-        projectId: "clinicaintegral-5c488"
-    };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    let isInitialized = false;
-
-    firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-            if (!isInitialized) {
-                adaptarSelectores();
-                isInitialized = true;
-            }
-        } else {
-            document.getElementById('grilla').innerHTML = '<h2>Debes iniciar sesión en la pantalla principal. 🛑</h2>';
-        }
-    });
-
-    // Lógica idéntica a tu index.html
-    function adaptarSelectores() {
-        const mod = document.getElementById('sel-mod').value;
-        const selTurno = document.getElementById('sel-turno');
-        const containerSala = document.getElementById('container-sala');
-        
-        containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
-
-        selTurno.innerHTML = '';
-        const opciones = (mod === 'rehab') 
-            ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] 
-            : ['manana', 'tarde', 'vespertino']; // ACÁ ESTABA EL ERROR MÍO (mayúsculas)
-        
-        opciones.forEach(op => {
-            const label = (mod === 'rehab') ? op : op.charAt(0).toUpperCase() + op.slice(1);
-            selTurno.innerHTML += `<option value="${op}">${label}</option>`;
-        });
-        
-        setTimeout(cargarDatos, 50); 
+// 4. Navegación
+function irA(v) {
+    if (v === 'selector') {
+        window.location.href = 'index.html';
+        return;
     }
+    document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+    const target = document.getElementById('view-' + v);
+    if (target) target.classList.add('active');
+}
 
-    // El mismo bucle exacto que tenés en tu index.html
+// 5. Lógica de Juegos
+function menuJuegos(n, u) {
+    document.getElementById('titulo-juego').innerText = "Jugando con " + n;
+    document.getElementById('pantalla-juego').innerHTML = `
+        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoAnimales('${u}')">🐶 Animales</button>
+        <button class="btn-game" style="background:var(--color-P);" onclick="juegoPintar('${u}')">🎨 Pintar</button>
+        <button class="btn-game" style="background:#f39c12;" onclick="juegoRompecabezas('${u}')">🧩 Rompecabezas</button>
+        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoMemoria('${n}')">🧠 ¿Quién es?</button>
+    `;
+    irA('juego');
+}
+
+function juegoMemoria(nombreActual) {
+    let opciones = [nombreActual];
+    while(opciones.length < 3) {
+        let azar = window.listaPacientes[Math.floor(Math.random() * window.listaPacientes.length)];
+        if(!opciones.includes(azar)) opciones.push(azar);
+    }
+    opciones.sort(() => Math.random() - 0.5);
+
+    let html = `<h3 style="margin-bottom:20px;">¿A quién buscamos?</h3>
+                <img src="${baseFotoPath}${encodeURIComponent(nombreActual)}.jpg" style="width:120px; height:120px; border-radius:50%; border:6px solid var(--color-AC); margin-bottom:20px;">
+                <div style="display:flex; justify-content:center; gap:15px;">`;
+    opciones.forEach(n => {
+        html += `<img src="${baseFotoPath}${encodeURIComponent(n)}.jpg" style="width:100px; height:100px; border-radius:20px; cursor:pointer; border:4px solid #ddd;" onclick="verificarMemoria('${n}', '${nombreActual}')">`;
+    });
+    document.getElementById('pantalla-juego').innerHTML = html + `</div>`;
+}
+
+function verificarMemoria(sel, obj) {
+    if(sel === obj) {
+        confetti({ particleCount: 100, spread: 70 });
+        registrarProgreso(obj, "Memoria", "Victoria");
+    } else {
+        alert("¡Intenta de nuevo!");
+        registrarProgreso(obj, "Memoria", "Error");
+    }
+}
+
+function registrarProgreso(nombre, juego, res) {
+    const fecha = new Date().toISOString().split('T')[0];
+    db.ref(`seguimiento_pacientes/${nombre}/actividad_cognitiva/${fecha}`).push({
+        juego: juego,
+        resultado: res,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+}
+
+function adaptarSelectores() {
+    const mod = document.getElementById('sel-mod').value;
+    const selTurno = document.getElementById('sel-turno');
+    const containerSala = document.getElementById('container-sala');
+    containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
+    selTurno.innerHTML = '';
+    const opciones = (mod === 'rehab') ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] : ['manana', 'tarde', 'vespertino'];
+    opciones.forEach(op => {
+        const label = (mod === 'rehab') ? op : op.charAt(0).toUpperCase() + op.slice(1);
+        selTurno.innerHTML += `<option value="${op}">${label}</option>`;
+    });
+    setTimeout(cargarDatos, 50);
+}
+ // El mismo bucle exacto que tenés en tu index.html
     async function cargarDatos() {
         const mod = document.getElementById('sel-mod').value;
         const sala = document.getElementById('sel-sala').value;
@@ -208,18 +228,7 @@ if(config) {
         }
     }
 
-    // --- Funciones de los Juegos ---
-   function menuJuegos(n, u) {
-    document.getElementById('titulo-juego').innerText = "Jugando con " + n;
-    document.getElementById('pantalla-juego').innerHTML = `
-        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoAnimales('${u}')">🐶 Animales</button>
-        <button class="btn-game" style="background:var(--color-P);" onclick="juegoPintar('${u}')">🎨 Pintar</button>
-        <button class="btn-game" style="background:#f39c12;" onclick="juegoRompecabezas('${u}')">🧩 Rompecabezas</button>
-        <button class="btn-game" style="background:var(--color-AC);" onclick="juegoMemoria('${n}')">🧠 ¿Quién es?</button>
-    `;
-    irA('juego');
-}
-    function juegoRompecabezas(u) {
+  function juegoRompecabezas(u) {
     document.getElementById('pantalla-juego').innerHTML = `
         <h3 style="margin-bottom:15px;">¡Armemos la imagen!</h3>
         <div id="puzzle-container" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; width:260px; margin:auto;"></div>
@@ -256,7 +265,7 @@ if(config) {
         container.appendChild(div);
     });
 }
-    function juegoAnimales(foto) {
+  function juegoAnimales(foto) {
     // Definimos los animales en una lista para que sea fácil agregar más
     const animales = [
         {emoji: '🐮', id: 'vaca'},
@@ -288,7 +297,7 @@ if(config) {
         setTimeout(() => i.classList.remove('sway'), 1500);
     }
 
-  function juegoPintar(foto) {
+ function juegoPintar(foto) {
     document.getElementById('pantalla-juego').innerHTML = `
         <h3 style="margin-bottom:10px;">¡Dale color a la foto!</h3>
         <div id="canvas-container" style="position:relative; width:180px; height:180px; margin:auto;">
@@ -314,68 +323,7 @@ if(config) {
         paleta.appendChild(btn);
     });
 }
-
-    function juegoMemoria(nombreActual) {
-    // 1. Obtenemos un grupo de pacientes (incluyendo al actual para que sea la respuesta)
-    // Usamos el objeto state.pacientes que ya tenés cargado de la asistencia
-    let listaNombres = Object.keys(state.pacientes);
-    
-    // Mezclamos y elegimos el objetivo + 2 distractores
-    let objetivo = nombreActual;
-    let opciones = [objetivo];
-    
-    while(opciones.length < 3) {
-        let azar = listaNombres[Math.floor(Math.random() * listaNombres.length)];
-        if(!opciones.includes(azar)) opciones.push(azar);
-    }
-    opciones.sort(() => Math.random() - 0.5); // Mezclar opciones
-
-    let html = `<h3 style="margin-bottom:20px;">¿A quién buscamos?</h3>
-                <img src="${baseFotoPath}${encodeURIComponent(objetivo)}.jpg" style="width:120px; height:120px; border-radius:50%; border:6px solid var(--color-AC); margin-bottom:20px;">
-                <div style="display:flex; justify-content:center; gap:15px;">`;
-    
-    opciones.forEach(n => {
-        html += `<img src="${baseFotoPath}${encodeURIComponent(n)}.jpg" 
-                 style="width:100px; height:100px; border-radius:20px; cursor:pointer; border:4px solid #ddd;"
-                 onclick="verificarMemoria('${n}', '${objetivo}')">`;
-    });
-    
-    html += `</div>`;
-    document.getElementById('pantalla-juego').innerHTML = html;
-}
-
-function verificarMemoria(seleccion, objetivo) {
-    if(seleccion === objetivo) {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        alert("¡Excelente asociación!");
-        
-        // ¡ACÁ ESTÁ LA MAGIA! Reportamos el éxito a Dominguito
-        registrarProgreso(objetivo, "Juego de Memoria", "Victoria");
-        
-    } else {
-        event.target.style.animation = "sway 0.3s";
-        setTimeout(() => event.target.style.animation = "", 300);
-        
-        // También podemos registrar el error si querés medir dificultad
-        registrarProgreso(objetivo, "Juego de Memoria", "Error");
-    }
-}
-    function registrarProgreso(nombre, nombreJuego, resultado) {
-    const fecha = new Date().toISOString().split('T')[0];
-    const registro = {
-        juego: nombreJuego,
-        resultado: resultado, // ej: "Victoria" o "Precisión: 100%"
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-    
-    // Guardamos en la misma ruta del paciente, pero en una rama de actividad cognitiva
-    db.ref(`seguimiento_pacientes/${nombre}/actividad_cognitiva/${fecha}`).push(registro);
-}
-  
-    // Navegación normal para el resto de las vistas
-    document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-    document.getElementById('view-'+v).classList.add('active');
-}
 </script>
 </body>
 </html>
+         
