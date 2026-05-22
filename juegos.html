@@ -7,8 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script> <style>
         :root { --primary: #ff6b6b; --secondary: #4ecdc4; --accent: #ffe66d; }
         body { font-family: 'Nunito', sans-serif; background: #2d3436; color: white; margin: 0; padding: 20px; }
         h1, h2 { font-family: 'Fredoka One', cursive; text-align: center; }
@@ -104,51 +104,51 @@ async function cargarDatos() {
     const sala = document.getElementById('sel-sala').value;
     const turno = document.getElementById('sel-turno').value;
     
+    // En juegos no hay fecha, así que forzamos la de hoy o una fija
+    const fecha = new Date().toISOString().split('T')[0];
+
     const grid = document.getElementById('grilla');
     grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
-
-    // Tu ruta que funciona:
+    
     let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
     
-    try {
-        const snap = await db.ref(refPath).once('value');
-        const todos = snap.val();
-        
-        if(!todos) {
-            grid.innerHTML = '<h2>No hay pacientes registrados. 🤷‍♂️</h2>';
-            return;
-        }
-
-        grid.innerHTML = '';
-        let encontrados = 0;
-        const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
-
-        // Bucle corregido para leer: { "Nombre": { sala: "1", turno: "Mañana" } }
-        for (let nombre in todos) {
-            let datos = todos[nombre]; 
-
-            // Filtro (usamos String para evitar errores si en Firebase es número)
-            const coincide = (String(datos.sala) === String(sala) && String(datos.turno) === String(turno));
-
-            if (coincide) {
-                encontrados++;
-                const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
-                
-                grid.innerHTML += `
-                    <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
-                        <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
-                        <p>${nombre}</p>
-                    </div>`;
-            }
-        }
-
-        if(encontrados === 0) {
-            grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
-        }
-    } catch (e) {
-        console.error("Error:", e);
-        grid.innerHTML = '<h2>Error al cargar datos.</h2>';
+    const snap = await db.ref(refPath).once('value');
+    const todos = snap.val();
+    
+    if(!todos) {
+        grid.innerHTML = '<h2>No hay pacientes registrados. 🤷‍♂️</h2>';
+        return;
     }
+
+    grid.innerHTML = '';
+    let encontrados = 0;
+    let procesados = {}; 
+    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+
+    for (let key in todos) {
+        let nombre = (mod === 'rehab') ? todos[key] : key;
+        
+        if (procesados[nombre]) continue;
+        
+        // Esta es la lógica que tenías en index que sí funciona
+        let p = (mod === 'rehab') ? { turno: turno } : todos[key];
+        const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+
+        if (coincide) {
+            procesados[nombre] = true;
+            encontrados++;
+            
+            const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+            
+            grid.innerHTML += `
+                <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
+                    <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                    <p>${nombre}</p>
+                </div>`;
+        }
+    }
+
+    if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
 }
 
     function menuJuegos(n, u) {
