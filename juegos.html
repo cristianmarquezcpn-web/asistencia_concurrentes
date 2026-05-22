@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
         :root { --primary: #ff6b6b; --secondary: #4ecdc4; --accent: #ffe66d; }
         body { font-family: 'Nunito', sans-serif; background: #2d3436; color: white; margin: 0; padding: 20px; }
         h1, h2 { font-family: 'Fredoka One', cursive; text-align: center; }
@@ -32,14 +33,14 @@
     <h1>🎮 ZONA DE JUEGOS</h1>
     
     <div class="controles-header" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
-        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
+        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
 
         <div id="container-sala">
-            <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
+            <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
                 <option value="1">Sala 1</option>
                 <option value="2">Sala 2</option>
                 <option value="3">Sala 3</option>
@@ -47,7 +48,7 @@
             </select>
         </div>
 
-        <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;"></select>
+        <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;"></select>
     </div>
 
     <div class="grid" id="grilla"></div>
@@ -71,13 +72,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Verificamos el usuario antes de hacer nada
+    // Variable global para evitar recargas fantasma
+    let isInitialized = false;
+
     firebase.auth().onAuthStateChanged((user) => {
         if (user) {
             console.log("Sesión activa para:", user.email);
-            adaptarSelectores(); // Arranca el sistema
+            if (!isInitialized) {
+                adaptarSelectores();
+                isInitialized = true;
+            }
         } else {
-            console.log("No hay usuario logueado.");
             document.getElementById('grilla').innerHTML = '<h2>Debes iniciar sesión en la pantalla principal. 🛑</h2>';
         }
     });
@@ -96,60 +101,75 @@
         } else {
             selTurno.innerHTML = '<option value="Mañana">Mañana</option><option value="Tarde">Tarde</option><option value="Vespertino">Vespertino</option>';
         }
-        cargarDatos();
-    }
-// Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
-async function cargarDatos() {
-    const mod = document.getElementById('sel-mod').value;
-    const sala = document.getElementById('sel-sala').value;
-    const turno = document.getElementById('sel-turno').value;
-    
-    // En juegos no hay fecha, así que forzamos la de hoy o una fija
-    const fecha = new Date().toISOString().split('T')[0];
-
-    const grid = document.getElementById('grilla');
-    grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
-    
-    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
-    
-    const snap = await db.ref(refPath).once('value');
-    const todos = snap.val();
-    
-    if(!todos) {
-        grid.innerHTML = '<h2>No hay pacientes registrados. 🤷‍♂️</h2>';
-        return;
+        
+        // Retraso minúsculo para asegurar que el DOM cargó los selects
+        setTimeout(cargarDatos, 50); 
     }
 
-    grid.innerHTML = '';
-    let encontrados = 0;
-    let procesados = {}; 
-    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+    async function cargarDatos() {
+        const mod = document.getElementById('sel-mod').value;
+        const sala = document.getElementById('sel-sala').value;
+        const turno = document.getElementById('sel-turno').value;
+        const grid = document.getElementById('grilla');
 
-    for (let key in todos) {
-        let nombre = (mod === 'rehab') ? todos[key] : key;
-        
-        if (procesados[nombre]) continue;
-        
-        // Esta es la lógica que tenías en index que sí funciona
-        let p = (mod === 'rehab') ? { turno: turno } : todos[key];
-        const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+        // Si no hay turno, no intentamos cargar nada aún
+        if (!turno) return; 
 
-        if (coincide) {
-            procesados[nombre] = true;
-            encontrados++;
+        grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
+        
+        let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
+        
+        try {
+            const snap = await db.ref(refPath).once('value');
+            const todos = snap.val();
             
-            const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
-            
-            grid.innerHTML += `
-                <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
-                    <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
-                    <p>${nombre}</p>
-                </div>`;
+            if(!todos) {
+                grid.innerHTML = `<h2 style="color:var(--accent);">No hay datos en la ruta: "${refPath}".</h2>`;
+                return;
+            }
+
+            grid.innerHTML = '';
+            let encontrados = 0;
+            let descartados = 0; // Para el modo DEBUG
+            let procesados = {}; 
+            const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+
+            for (let nombre in todos) {
+                if (procesados[nombre]) continue;
+                procesados[nombre] = true;
+
+                let p = (mod === 'rehab') ? { turno: turno } : todos[nombre];
+                
+                // Conversión agresiva para que los números no rompan la comparación
+                const sBase = p.sala ? String(p.sala).trim() : '';
+                const tBase = p.turno ? String(p.turno).trim() : '';
+                const sUser = String(sala).trim();
+                const tUser = String(turno).trim();
+
+                const coincide = (mod === 'rehab') ? true : (sBase === sUser && tBase === tUser);
+
+                if (coincide) {
+                    encontrados++;
+                    const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+                    grid.innerHTML += `
+                        <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
+                            <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                            <p>${nombre}</p>
+                        </div>`;
+                } else {
+                    descartados++;
+                }
+            }
+
+            if(encontrados === 0) {
+                grid.innerHTML = `<h2>No hay pacientes. Encontré ${descartados} personas, pero ninguna en Sala "${sala}" y Turno "${turno}".</h2>`;
+            }
+
+        } catch (e) {
+            console.error(e);
+            grid.innerHTML = '<h2>Error conectando a la base de datos.</h2>';
         }
     }
-
-    if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
-}
 
     function menuJuegos(n, u) {
         document.getElementById('titulo-juego').innerText = "¡Juega con " + n + "!";
