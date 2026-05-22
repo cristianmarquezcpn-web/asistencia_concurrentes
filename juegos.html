@@ -100,14 +100,17 @@
     }
 // Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
 // Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
+// Función UNIFICADA: Igual a la de asistencia, adaptada para Juegos
 async function cargarDatos() {
     const mod = document.getElementById('sel-mod').value;
     const sala = document.getElementById('sel-sala').value;
     const turno = document.getElementById('sel-turno').value;
     
+    // IMPORTANTE: En juegos no usas fecha, así que eliminamos esa validación
     const grid = document.getElementById('grilla');
     grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
 
+    // Ruta exactamente igual a la de tu index
     let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
     
     try {
@@ -121,27 +124,27 @@ async function cargarDatos() {
 
         grid.innerHTML = '';
         let encontrados = 0;
-        let procesados = {}; // 🔥 El filtro mágico para que Rehab no duplique
+        let procesados = {}; // El filtro anti-duplicados que funciona en tu index
         const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
 
         for (let key in todos) {
             let nombre = (mod === 'rehab') ? todos[key] : key;
             
-            // Si el paciente ya está en pantalla, lo saltamos
-            if (procesados[nombre]) continue; 
+            // Si ya lo procesamos, no lo volvemos a poner (evita duplicados en Rehab)
+            if (procesados[nombre]) continue;
             
             let p = (mod === 'rehab') ? { turno: turno } : todos[key];
             
-            // Filtro de sala y turno igualito a tu index
+            // Filtro de comparación exacto igual al de tu index
             const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
 
             if (coincide) {
-                procesados[nombre] = true; // Lo registramos para no repetirlo
+                procesados[nombre] = true;
                 encontrados++;
                 
                 const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
                 
-                // Creamos la card del juego
+                // Mantenemos la estructura de la card para juegos
                 grid.innerHTML += `
                     <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
                         <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
@@ -150,11 +153,12 @@ async function cargarDatos() {
             }
         }
 
-        if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
-        
+        if(encontrados === 0) {
+            grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+        }
     } catch (e) {
         console.error("Error al cargar:", e);
-        grid.innerHTML = '<h2>Error de acceso. Revisa los permisos o tu conexión.</h2>';
+        grid.innerHTML = '<h2>Error de acceso. Revisa los permisos en Firebase.</h2>';
     }
 }
     function menuJuegos(n, u) {
