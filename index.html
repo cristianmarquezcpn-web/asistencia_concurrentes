@@ -378,21 +378,39 @@ function feedbackSensorial() {
     el.className = `p-card estado-${state.pacientes[n]} pop-anim`;
 }
     // Resumen antes de guardar
-    function verificar() {
+   // 1. Esta función muestra el modal con el campo de observación
+function verificar() {
     document.getElementById('modal').style.display = 'flex';
     let t = document.getElementById('tabla-ver');
     t.innerHTML = '';
     
     for(let n in state.pacientes) {
-        let estado = state.pacientes[n];
+        let datos = state.pacientes[n];
+        let estado = (typeof datos === 'object') ? datos.estado : datos;
+        let obs = (typeof datos === 'object') ? (datos.observacion || '') : '';
+        
         let color = estado === 'P' ? 'var(--color-P)' : (estado === 'A' ? 'var(--color-A)' : 'var(--color-AC)');
         let emoji = estado === 'P' ? '✔️' : (estado === 'A' ? '❌' : '🔵');
         
-        // Agregamos un onclick en cada fila para que puedas cambiar el estado ahí mismo
-        t.innerHTML += `<tr onclick="cambiarEnModal('${n}')" style="cursor:pointer;">
-            <td style="text-align:left;">${n}</td>
-            <td style="color: ${color};">${emoji} ${estado}</td>
-        </tr>`;
+        t.innerHTML += `
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="text-align:left; cursor:pointer;" onclick="cambiarEnModal('${n}')">${n}</td>
+                <td style="color: ${color}; cursor:pointer;" onclick="cambiarEnModal('${n}')">${emoji} ${estado}</td>
+                <td>
+                    <input type="text" placeholder="Obs..." value="${obs}" 
+                           onchange="actualizarObs('${n}', this.value)" 
+                           style="width:80px; padding:5px; border-radius:10px; border:1px solid #ccc;">
+                </td>
+            </tr>`;
+    }
+}
+
+// 2. Esta función nueva permite guardar lo que escribas en la observación
+function actualizarObs(n, valor) {
+    if (typeof state.pacientes[n] !== 'object') {
+        state.pacientes[n] = { estado: state.pacientes[n], observacion: valor };
+    } else {
+        state.pacientes[n].observacion = valor;
     }
 }
 
@@ -404,28 +422,34 @@ function cambiarEnModal(n) {
 
     // Guardado Final optimizado para la IA y Celebración con confeti
     function guardar() {
-        const fecha = document.getElementById('fecha-selector').value;
-        const updates = {};
+    const fecha = document.getElementById('fecha-selector').value;
+    const updates = {};
+    
+    for(let n in state.pacientes) {
+        let data = state.pacientes[n];
         
-        for(let n in state.pacientes) {
-            updates[`seguimiento_pacientes/${n}/historial/${fecha}`] = state.pacientes[n];
-        }
+        // Si ya es un objeto (porque agregaste una observación), lo usamos tal cual.
+        // Si sigue siendo solo el string (P, A, AC), lo convertimos en un objeto para la IA.
+        let payload = (typeof data === 'object') ? data : { estado: data, observacion: "" };
         
-        db.ref().update(updates).then(() => { 
-            document.getElementById('modal').style.display = 'none'; 
-            
-            // ¡MAGIA! Disparamos confeti
-            confetti({
-                particleCount: 200,
-                spread: 120,
-                origin: { y: 0.6 }
-            });
-            
-            setTimeout(() => {
-                alert("¡Trabajo espectacular! Todo guardado correctamente.🚀");
-            }, 500);
-        });
+        updates[`seguimiento_pacientes/${n}/historial/${fecha}`] = payload;
     }
+    
+    db.ref().update(updates).then(() => { 
+        document.getElementById('modal').style.display = 'none'; 
+        
+        // ¡LA MAGIA QUE NO PUEDE FALTAR! 🎊
+        confetti({
+            particleCount: 200,
+            spread: 120,
+            origin: { y: 0.6 }
+        });
+        
+        setTimeout(() => {
+            alert("¡Trabajo espectacular! Todo guardado correctamente.🚀");
+        }, 500);
+    });
+}
 </script>
 </body>
 </html>
