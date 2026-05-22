@@ -30,24 +30,29 @@
 
 <div id="view-selector" class="view active">
     <h1>🎮 ZONA DE JUEGOS</h1>
-    <div style="text-align:center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
-        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:10px; border-radius:15px; font-size:1rem;">
+    
+    <div class="controles-header" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
+        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
-        <select id="sel-sala" onchange="cargarDatos()" style="padding:10px; border-radius:15px; font-size:1rem;">
-            <option value="1">Sala 1</option>
-            <option value="2">Sala 2</option>
-            <option value="3">Sala 3</option>
-            <option value="4">Sala 4</option>
-        </select>
-        <select id="sel-turno" onchange="cargarDatos()" style="padding:10px; border-radius:15px; font-size:1rem;"></select>
+
+        <div id="container-sala">
+            <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
+                <option value="1">Sala 1</option>
+                <option value="2">Sala 2</option>
+                <option value="3">Sala 3</option>
+                <option value="4">Sala 4</option>
+            </select>
+        </div>
+
+        <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;"></select>
     </div>
+
     <div class="grid" id="grilla"></div>
     <br><button onclick="window.location.href='index.html'" class="btn-game" style="background:#636e72">⬅ Volver a Asistencia</button>
 </div>
-
 <div id="view-juego" class="view">
     <h2 id="titulo-juego">Jugando...</h2>
     <div id="pantalla-juego"></div>
@@ -66,13 +71,29 @@
     const db = firebase.database();
 
     function adaptarSelectores() {
-        const mod = document.getElementById('sel-mod').value;
-        const selTurno = document.getElementById('sel-turno');
-        selTurno.innerHTML = '';
-        const turnos = (mod === 'rehab') ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] : ['Mañana', 'Tarde'];
-        turnos.forEach(t => selTurno.innerHTML += `<option value="${t}">${t}</option>`);
-        cargarDatos();
+    const mod = document.getElementById('sel-mod').value;
+    const selSala = document.getElementById('sel-sala');
+    const containerSala = document.getElementById('container-sala');
+    const selTurno = document.getElementById('sel-turno');
+    
+    // 1. Lógica para Ocultar/Mostrar Sala
+    if (mod === 'rehab') {
+        containerSala.style.display = 'none'; // Oculta la sala
+    } else {
+        containerSala.style.display = 'block'; // Muestra la sala
     }
+
+    // 2. Lógica para Turnos vs Días
+    selTurno.innerHTML = '';
+    if (mod === 'rehab') {
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        dias.forEach(d => selTurno.innerHTML += `<option value="${d}">${d}</option>`);
+    } else {
+        selTurno.innerHTML = '<option value="Mañana">Mañana</option><option value="Tarde">Tarde</option>';
+    }
+    
+    cargarDatos();
+}
 
     // Lógica de Carga REPLICADA de tu index.html
 async function cargarDatos() {
