@@ -74,25 +74,52 @@
         cargarDatos();
     }
 
-    async function cargarDatos() {
-        const mod = document.getElementById('sel-mod').value;
-        const sala = document.getElementById('sel-sala').value;
-        const turno = document.getElementById('sel-turno').value;
-        const refPath = `${mod}/${sala}/${turno}`;
+    // Lógica de Carga REPLICADA de tu index.html
+async function cargarDatos() {
+    const mod = document.getElementById('sel-mod').value;
+    const sala = document.getElementById('sel-sala').value;
+    const turno = document.getElementById('sel-turno').value;
+    
+    const grid = document.getElementById('grilla');
+    grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
+
+    // 1. Apuntamos a la misma fuente de datos que funciona en el index
+    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
+    
+    const snap = await db.ref(refPath).once('value');
+    const todos = snap.val();
+    
+    if(!todos) {
+        grid.innerHTML = '<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>';
+        return;
+    }
+
+    grid.innerHTML = '';
+    let encontrados = 0;
+    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+
+    for (let key in todos) {
+        let nombre = (mod === 'rehab') ? todos[key] : key;
+        let p = (mod === 'rehab') ? { turno: turno } : todos[key];
         
-        const snap = await db.ref(refPath).once('value');
-        const todos = snap.val();
-        const grid = document.getElementById('grilla');
-        grid.innerHTML = '';
-        
-        for (let key in todos) {
-            let nombre = todos[key].nombre || key;
-            let fotoUrl = `https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/${encodeURIComponent(nombre)}.jpg`;
-            grid.innerHTML += `<div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
-                <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/120'">
-                <p>${nombre}</p></div>`;
+        // Filtro de sala y turno igual al index
+        const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+
+        if (coincide) {
+            encontrados++;
+            const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+            
+            // Creamos la card con la misma estructura que en el index
+            grid.innerHTML += `
+                <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
+                    <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                    <p>${nombre}</p>
+                </div>`;
         }
     }
+
+    if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+}
 
     function menuJuegos(n, u) {
         document.getElementById('titulo-juego').innerText = "¡Juega con " + n + "!";
