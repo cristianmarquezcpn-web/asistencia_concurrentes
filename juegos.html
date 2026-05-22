@@ -36,38 +36,76 @@
 <div id="view-selector" class="view active">
     <h1 style="text-align:center;">🎮 Zona de Juegos</h1>
     
-    <div class="controles-header" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
-        
-        <button class="btn-primario" onclick="irA('juegos')">
-            🚀 Entrar a la Zona de Juegos
-        </button>
-
-    </div>
-</div>
-        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
+        <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
             <option value="rehab">Rehabilitación</option>
         </select>
         <div id="container-sala">
-            <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
-                <option value="1">Sala 1</option><option value="2">Sala 2</option><option value="3">Sala 3</option><option value="4">Sala 4</option>
+            <select id="sel-sala" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;">
+                <option value="1">Sala 1</option><option value="2">Sala 2</option>
+                <option value="3">Sala 3</option><option value="4">Sala 4</option>
             </select>
         </div>
-        <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;"></select>
+        <select id="sel-turno" onchange="cargarDatos()" style="padding:15px; border-radius:15px; font-size:1.1rem;"></select>
     </div>
+
+    <div style="margin-top:20px; text-align:center;">
+        <button class="btn-game" style="background:var(--color-AC);" onclick="irA('juegos')">
+            🚀 Entrar a la Zona de Juegos
+        </button>
+    </div>
+
     <div class="grid" id="grilla"></div>
-    <br><button onclick="window.location.href='index.html'" style="width:100%; padding:20px; border-radius:20px; border:none; background:#95a5a6; color:white; font-weight:bold;">⬅ Volver a Asistencia</button>
+    <br>
+    <button onclick="window.location.href='index.html'" style="width:100%; padding:20px; border-radius:20px; border:none; background:#95a5a6; color:white; font-weight:bold;">⬅ Volver a Asistencia</button>
 </div>
 
 <div id="view-juego" class="view">
     <div class="juego-container">
         <h2 id="titulo-juego"></h2>
         <div id="pantalla-juego" style="min-height: 350px; display:flex; align-items:center; justify-content:center; flex-direction:column;"></div>
-        <br><button onclick="irA('selector')" class="btn-game" style="background:#bdc3c7;">⬅ Cambiar de compañero</button>
+        <br>
+        <button onclick="irA('selector')" class="btn-game" style="background:#bdc3c7;">⬅ Cambiar de compañero</button>
     </div>
-</div>
+</div>    
 <script>
+   function irA(v) {
+        if (v === 'juegos') {
+            const mod = document.getElementById('sel-mod').value;
+            const sala = document.getElementById('sel-sala').value;
+            
+            // Guardamos la ubicación para que el juego sepa a quién buscar
+            localStorage.setItem('configJuego', JSON.stringify({mod, sala}));
+            
+            // Saltamos al archivo de juegos
+            window.location.href = 'juegos.html';
+            return;
+        }
+
+        // Navegación interna normal
+        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+        document.getElementById('view-'+v).classList.add('active');
+   } 
+    // Variable global para que el juego sepa quiénes son los compañeros
+window.listaPacientes = [];
+
+// Recuperamos el contexto y cargamos los nombres de los compañeros
+const config = JSON.parse(localStorage.getItem('configJuego'));
+
+if(config) {
+    let ruta = (config.mod === 'rehab') ? 'rehab/turnos/Lunes' : `${config.mod}/pacientes`;
+    firebase.database().ref(ruta).once('value').then(snap => {
+        const data = snap.val();
+        // Filtramos por sala o tomamos todos si es rehab
+        if (config.mod !== 'rehab') {
+            window.listaPacientes = Object.keys(data).filter(n => String(data[n].sala) === config.sala);
+        } else {
+            window.listaPacientes = Object.values(data);
+        }
+    });
+}
     const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
     const firebaseConfig = {
         apiKey: "AIzaSyAugXXx_b_wKFByhDbLZslk2HA_UTzrzd8",
@@ -333,20 +371,7 @@ function verificarMemoria(seleccion, objetivo) {
     // Guardamos en la misma ruta del paciente, pero en una rama de actividad cognitiva
     db.ref(`seguimiento_pacientes/${nombre}/actividad_cognitiva/${fecha}`).push(registro);
 }
-  function irA(v) {
-    if (v === 'juegos') {
-        // Obtenemos los valores de los selectores que pusiste
-        const mod = document.getElementById('sel-mod').value;
-        const sala = document.getElementById('sel-sala').value;
-        
-        // Guardamos el contexto
-        localStorage.setItem('configJuego', JSON.stringify({mod, sala}));
-        
-        // Salto a la página de juegos
-        window.location.href = 'juegos.html';
-        return;
-    }
-
+  
     // Navegación normal para el resto de las vistas
     document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
     document.getElementById('view-'+v).classList.add('active');
