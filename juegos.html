@@ -359,26 +359,67 @@ function adaptarSelectores() {
     }
     function juegoSimon(u) {
     let secuencia = [];
+    let juegoActivo = false;
+
+    // Estructura visual mejorada
     document.getElementById('pantalla-juego').innerHTML = `
-        <h3>Presiona los botones en orden</h3>
-        <div id="simon-container">
-            <button onclick="registrarSimon(1)" style="background:var(--color-P); padding:20px; border-radius:50%; margin:10px;">🔴</button>
-            <button onclick="registrarSimon(2)" style="background:var(--color-AC); padding:20px; border-radius:50%; margin:10px;">🔵</button>
+        <h3 id="status-text">Observa las luces...</h3>
+        <div id="simon-container" style="display:flex; justify-content:center; gap:20px;">
+            <button id="btn-1" style="width:80px; height:80px; border-radius:50%; background:#bdc3c7; transition:0.3s;"></button>
+            <button id="btn-2" style="width:80px; height:80px; border-radius:50%; background:#bdc3c7; transition:0.3s;"></button>
         </div>
     `;
 
-    window.registrarSimon = (n) => {
-        secuencia.push(n);
-        // Aquí podrías agregar un sonido de éxito suave
-        console.log("Secuencia guardada: " + secuencia);
-        // Enviar a tu base de datos el progreso final
-        db.ref('juegos/' + u).push({ juego: 'Simon', nivel: secuencia.length, fecha: Date.now() });
-    };
+    // Función para "iluminar" un botón (estimulación)
+    async function iluminar(id, color) {
+        const btn = document.getElementById('btn-' + id);
+        btn.style.background = color;
+        // Sonido suave (opcional, igual que el Light Box)
+        if (navigator.vibrate) navigator.vibrate(50);
+        await new Promise(r => setTimeout(r, 800)); // Pausa cognitiva para que procesen
+        btn.style.background = '#bdc3c7';
+        await new Promise(r => setTimeout(r, 400));
     }
+
+    // El sistema genera un paso más
+    async function nuevoTurno() {
+        document.getElementById('status-text').innerText = "¡Mirá bien!";
+        secuencia.push(Math.floor(Math.random() * 2) + 1);
+        
+        for (let paso of secuencia) {
+            await iluminar(paso, paso === 1 ? 'var(--color-P)' : 'var(--color-AC)');
+        }
+        document.getElementById('status-text').innerText = "Ahora te toca a vos";
+        juegoActivo = true;
+    }
+
+    // El usuario responde
+    window.registrarSimon = (n) => {
+        if (!juegoActivo) return;
+        
+        // Efecto visual al tocar
+        iluminar(n, n === 1 ? 'var(--color-P)' : 'var(--color-AC)');
+        
+        // Guardamos progreso en la BD
+        registrarProgreso(u, 'Simon', 'Nivel ' + secuencia.length);
+        
+        // Si completa la secuencia, sigue el juego con calma
+        if (secuencia.length > 0) {
+            juegoActivo = false;
+            setTimeout(nuevoTurno, 1500); // Espera 1.5s para no presionar
+        }
+    };
+
+    // Cambiamos los botones para que usen la función dinámica
+    document.getElementById('btn-1').onclick = () => registrarSimon(1);
+    document.getElementById('btn-2').onclick = () => registrarSimon(2);
+
+    nuevoTurno();
+  }
     // Esto asegura que al cargar la página, se ejecuten los selectores
     window.onload = function() {
         adaptarSelectores();
-    };
+ };
 </script>
 </body>
 </html>
