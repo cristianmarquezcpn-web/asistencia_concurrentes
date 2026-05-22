@@ -99,19 +99,23 @@
         cargarDatos();
     }
 // Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
-// Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
-// Función UNIFICADA: Igual a la de asistencia, adaptada para Juegos
 async function cargarDatos() {
+    console.log("Iniciando cargarDatos..."); // 🔥 Si esto no sale en consola, el botón no llama a la función
+    
     const mod = document.getElementById('sel-mod').value;
     const sala = document.getElementById('sel-sala').value;
     const turno = document.getElementById('sel-turno').value;
     
-    // IMPORTANTE: En juegos no usas fecha, así que eliminamos esa validación
+    // Ruta explícita: Vamos a probar una estructura estándar
+    // Si tus datos en Firebase están en "cd/pacientes", esto debería funcionar
+    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
+    
+    console.log("La ruta a consultar es:", refPath); // 🔥 Si esto no sale, el error está arriba
+
     const grid = document.getElementById('grilla');
     grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
-
-    // Ruta exactamente igual a la de tu index
-    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
+    
+    // ... resto del código ...
     
     try {
         const snap = await db.ref(refPath).once('value');
