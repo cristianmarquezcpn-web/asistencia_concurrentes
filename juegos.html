@@ -35,7 +35,15 @@
 
 <div id="view-selector" class="view active">
     <h1 style="text-align:center;">🎮 Zona de Juegos</h1>
+    
     <div class="controles-header" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; background: white; padding: 20px; border-radius: 25px;">
+        
+        <button class="btn-primario" onclick="irA('juegos')">
+            🚀 Entrar a la Zona de Juegos
+        </button>
+
+    </div>
+</div>
         <select id="sel-mod" onchange="adaptarSelectores()" style="padding:15px; border-radius:15px; font-size:1.1rem; color: black;">
             <option value="cd">Centro de Día (CD)</option>
             <option value="cet">Educativo (CET)</option>
@@ -242,13 +250,13 @@
         setTimeout(() => i.classList.remove('sway'), 1500);
     }
 
-   function juegoPintar(foto) {
+  function juegoPintar(foto) {
     document.getElementById('pantalla-juego').innerHTML = `
         <h3 style="margin-bottom:10px;">¡Dale color a la foto!</h3>
         <div id="canvas-container" style="position:relative; width:180px; height:180px; margin:auto;">
-            <img src="${foto}" id="img-base" style="width:180px; border-radius:30px; filter:grayscale(100%); transition:1.5s;">
+            <img src="${foto}" id="img-base" style="width:180px; height:180px; border-radius:30px; filter:grayscale(100%); transition:0.5s; object-fit:cover; border: 5px solid #ccc;">
         </div>
-        <div id="paleta" style="margin-top:20px; display:flex; justify-content:center; gap:10px;"></div>
+        <div id="paleta" style="margin-top:20px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
     `;
 
     const colores = ['#e74c3c', '#f1c40f', '#27ae60', '#3498db', '#9b59b6'];
@@ -256,24 +264,14 @@
 
     colores.forEach(c => {
         const btn = document.createElement('button');
-        btn.style.cssText = `
-            width:60px; height:60px; border-radius:50%; border:4px solid white; 
-            background:${c}; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: 0.3s;
-        `;
+        btn.style.cssText = `width:50px; height:50px; border-radius:50%; border:3px solid white; background:${c}; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);`;
         
         btn.onclick = function() {
-            // Efecto de pincelada
             const img = document.getElementById('img-base');
-            img.style.filter = 'grayscale(0%)'; // Revela el color
-            img.style.borderColor = c; // El borde toma el color del pincel
-            
-            // Sonido de pincel real
+            // Aplicamos el color directo al borde y quitamos el gris
+            img.style.filter = 'grayscale(0%)';
+            img.style.borderColor = c; 
             new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3').play();
-            
-            // Feedback de selección
-            document.querySelectorAll('#paleta button').forEach(b => b.style.transform = 'scale(1)');
-            this.style.transform = 'scale(1.2)';
         };
         paleta.appendChild(btn);
     });
@@ -310,19 +308,49 @@
 
 function verificarMemoria(seleccion, objetivo) {
     if(seleccion === objetivo) {
-        // Victoria: Feedback visual y sonoro
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         alert("¡Excelente asociación!");
+        
+        // ¡ACÁ ESTÁ LA MAGIA! Reportamos el éxito a Dominguito
+        registrarProgreso(objetivo, "Juego de Memoria", "Victoria");
+        
     } else {
-        // Error leve: Solo un temblor
         event.target.style.animation = "sway 0.3s";
         setTimeout(() => event.target.style.animation = "", 300);
+        
+        // También podemos registrar el error si querés medir dificultad
+        registrarProgreso(objetivo, "Juego de Memoria", "Error");
     }
 }
-    function irA(v) {
-        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-        document.getElementById('view-'+v).classList.add('active');
+    function registrarProgreso(nombre, nombreJuego, resultado) {
+    const fecha = new Date().toISOString().split('T')[0];
+    const registro = {
+        juego: nombreJuego,
+        resultado: resultado, // ej: "Victoria" o "Precisión: 100%"
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    // Guardamos en la misma ruta del paciente, pero en una rama de actividad cognitiva
+    db.ref(`seguimiento_pacientes/${nombre}/actividad_cognitiva/${fecha}`).push(registro);
+}
+  function irA(v) {
+    if (v === 'juegos') {
+        // Obtenemos los valores de los selectores que pusiste
+        const mod = document.getElementById('sel-mod').value;
+        const sala = document.getElementById('sel-sala').value;
+        
+        // Guardamos el contexto
+        localStorage.setItem('configJuego', JSON.stringify({mod, sala}));
+        
+        // Salto a la página de juegos
+        window.location.href = 'juegos.html';
+        return;
     }
+
+    // Navegación normal para el resto de las vistas
+    document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+}
 </script>
 </body>
 </html>
