@@ -100,55 +100,40 @@
     }
 // Lógica EXACTA de tu index (con filtro de duplicados y filtro de sala/turno)
 async function cargarDatos() {
-    console.log("Iniciando cargarDatos..."); // 🔥 Si esto no sale en consola, el botón no llama a la función
-    
     const mod = document.getElementById('sel-mod').value;
     const sala = document.getElementById('sel-sala').value;
     const turno = document.getElementById('sel-turno').value;
     
-    // Ruta explícita: Vamos a probar una estructura estándar
-    // Si tus datos en Firebase están en "cd/pacientes", esto debería funcionar
-    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
-    
-    console.log("La ruta a consultar es:", refPath); // 🔥 Si esto no sale, el error está arriba
-
     const grid = document.getElementById('grilla');
     grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
-    
-    // ... resto del código ...
+
+    // Tu ruta que funciona:
+    let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
     
     try {
         const snap = await db.ref(refPath).once('value');
         const todos = snap.val();
         
         if(!todos) {
-            grid.innerHTML = '<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>';
+            grid.innerHTML = '<h2>No hay pacientes registrados. 🤷‍♂️</h2>';
             return;
         }
 
         grid.innerHTML = '';
         let encontrados = 0;
-        let procesados = {}; // El filtro anti-duplicados que funciona en tu index
         const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
 
-        for (let key in todos) {
-            let nombre = (mod === 'rehab') ? todos[key] : key;
-            
-            // Si ya lo procesamos, no lo volvemos a poner (evita duplicados en Rehab)
-            if (procesados[nombre]) continue;
-            
-            let p = (mod === 'rehab') ? { turno: turno } : todos[key];
-            
-            // Filtro de comparación exacto igual al de tu index
-            const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+        // Bucle corregido para leer: { "Nombre": { sala: "1", turno: "Mañana" } }
+        for (let nombre in todos) {
+            let datos = todos[nombre]; 
+
+            // Filtro (usamos String para evitar errores si en Firebase es número)
+            const coincide = (String(datos.sala) === String(sala) && String(datos.turno) === String(turno));
 
             if (coincide) {
-                procesados[nombre] = true;
                 encontrados++;
-                
                 const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
                 
-                // Mantenemos la estructura de la card para juegos
                 grid.innerHTML += `
                     <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
                         <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
@@ -161,10 +146,11 @@ async function cargarDatos() {
             grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
         }
     } catch (e) {
-        console.error("Error al cargar:", e);
-        grid.innerHTML = '<h2>Error de acceso. Revisa los permisos en Firebase.</h2>';
+        console.error("Error:", e);
+        grid.innerHTML = '<h2>Error al cargar datos.</h2>';
     }
 }
+
     function menuJuegos(n, u) {
         document.getElementById('titulo-juego').innerText = "¡Juega con " + n + "!";
         document.getElementById('pantalla-juego').innerHTML = `
