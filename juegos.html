@@ -69,31 +69,9 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    // ... (código anterior: inicialización de firebase)
 
-    function adaptarSelectores() {
-    const mod = document.getElementById('sel-mod').value;
-    const selTurno = document.getElementById('sel-turno');
-    const containerSala = document.getElementById('container-sala');
-    
-    // Ocultar sala si es rehab
-    containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
-
-    // Cargar turnos con todos los horarios
-    selTurno.innerHTML = '';
-    if (mod === 'rehab') {
-        ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].forEach(d => 
-            selTurno.innerHTML += `<option value="${d}">${d}</option>`);
-    } else {
-        // Aquí agregamos los 3 turnos
-        selTurno.innerHTML = `
-            <option value="Mañana">Mañana</option>
-            <option value="Tarde">Tarde</option>
-            <option value="Vespertino">Vespertino</option>`;
-    }
-    cargarDatos();
-}
-
-    // Lógica de Carga REPLICADA de tu index.html
+// Función auxiliar para cargar, ahora la llamamos desde el login
 async function cargarDatos() {
     const mod = document.getElementById('sel-mod').value;
     const sala = document.getElementById('sel-sala').value;
@@ -102,44 +80,70 @@ async function cargarDatos() {
     const grid = document.getElementById('grilla');
     grid.innerHTML = '<h2>Buscando pacientes... 🕵️‍♂️</h2>';
 
-    // 1. Apuntamos a la misma fuente de datos que funciona en el index
     let refPath = (mod === 'rehab') ? `${mod}/turnos/${turno}` : `${mod}/pacientes`;
     
-    const snap = await db.ref(refPath).once('value');
-    const todos = snap.val();
-    
-    if(!todos) {
-        grid.innerHTML = '<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>';
-        return;
-    }
-
-    grid.innerHTML = '';
-    let encontrados = 0;
-    const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
-
-    for (let key in todos) {
-        let nombre = (mod === 'rehab') ? todos[key] : key;
-        let p = (mod === 'rehab') ? { turno: turno } : todos[key];
+    try {
+        const snap = await db.ref(refPath).once('value');
+        const todos = snap.val();
         
-        // Filtro de sala y turno igual al index
-        const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
-
-        if (coincide) {
-            encontrados++;
-            const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
-            
-            // Creamos la card con la misma estructura que en el index
-            grid.innerHTML += `
-                <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
-                    <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
-                    <p>${nombre}</p>
-                </div>`;
+        if(!todos) {
+            grid.innerHTML = '<h2>No hay pacientes registrados aquí. 🤷‍♂️</h2>';
+            return;
         }
-    }
 
-    if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+        grid.innerHTML = '';
+        let encontrados = 0;
+        const baseFotoPath = "https://raw.githubusercontent.com/cristianmarquezcpn-web/asistencia_concurrentes/main/fotos_concurrentes/";
+
+        for (let key in todos) {
+            let nombre = (mod === 'rehab') ? todos[key] : key;
+            let p = (mod === 'rehab') ? { turno: turno } : todos[key];
+            const coincide = (mod === 'rehab') ? true : (String(p.sala) === sala && p.turno === turno);
+
+            if (coincide) {
+                encontrados++;
+                const fotoUrl = `${baseFotoPath}${encodeURIComponent(nombre)}.jpg`;
+                grid.innerHTML += `
+                    <div class="p-card" onclick="menuJuegos('${nombre}', '${fotoUrl}')">
+                        <img src="${fotoUrl}" onerror="this.src='https://via.placeholder.com/110'">
+                        <p>${nombre}</p>
+                    </div>`;
+            }
+        }
+        if(encontrados === 0) grid.innerHTML = '<h2>No hay pacientes en esta sala/turno. 🤷‍♂️</h2>';
+    } catch (e) {
+        console.error("Error al cargar:", e);
+        grid.innerHTML = '<h2>Error de acceso. ¿Estás logueado?</h2>';
+    }
 }
 
+// ESTA ES LA CLAVE: Esperamos a que Firebase sepa quién eres
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Sesión activa para:", user.email);
+        adaptarSelectores(); // Esto inicializa todo una vez que el usuario es válido
+    } else {
+        console.log("No hay usuario, redireccionando o esperando...");
+        // Si necesitas que se logueen, aquí podrías redirigir a index.html
+    }
+});
+
+function adaptarSelectores() {
+    const mod = document.getElementById('sel-mod').value;
+    const selTurno = document.getElementById('sel-turno');
+    const containerSala = document.getElementById('container-sala');
+    
+    containerSala.style.display = (mod === 'rehab') ? 'none' : 'block';
+
+    selTurno.innerHTML = '';
+    if (mod === 'rehab') {
+        ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].forEach(d => 
+            selTurno.innerHTML += `<option value="${d}">${d}</option>`);
+    } else {
+        selTurno.innerHTML = '<option value="Mañana">Mañana</option><option value="Tarde">Tarde</option><option value="Vespertino">Vespertino</option>';
+    }
+    cargarDatos();
+}
     function menuJuegos(n, u) {
         document.getElementById('titulo-juego').innerText = "¡Juega con " + n + "!";
         document.getElementById('pantalla-juego').innerHTML = `
